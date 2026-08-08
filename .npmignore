@@ -1,0 +1,8 @@
+test/
+tsconfig.json
+.gitignore
+.github/
+TODO.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+package-lock.json

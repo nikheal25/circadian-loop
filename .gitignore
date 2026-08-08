@@ -1,0 +1,6 @@
+node_modules/
+
+# Loop runtime state. cycles.jsonl records every message the user types,
+# so it must never be committed by accident.
+.pi/loop/
+loop-results/

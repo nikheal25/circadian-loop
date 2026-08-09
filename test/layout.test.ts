@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   buildHelpCard,
   buildSleepCard,
@@ -83,10 +84,34 @@ describe("buildSleepCard", () => {
   });
 
   it("does not overflow on wide characters", () => {
-    const wide = "日本語のテキストです ".repeat(20) + "🎉🎉🎉";
+    // Must measure COLUMNS, not code units — 68 CJK chars are 136 columns
+    // wide but only 68 `.length`, so a `.length` assertion proves nothing.
+    const wide = "日本語のテキストです ".repeat(20) + "🎉🎉🎉 👨‍👩‍👧‍👦 éé";
     for (const line of buildSleepCard(theme, sleepArgs({ summary: wide }), 68)) {
-      // Wide chars occupy 2 cells, so the stripped length is <= the width.
-      assert.ok(strip(line).length <= 68);
+      assert.equal(visibleWidth(line), 68);
+    }
+  });
+
+  it("strips control characters and ANSI from the summary", () => {
+    // \r would measure as 1 column but return the cursor to column 0,
+    // corrupting every row the overlay composited over.
+    const nasty = "Reviewed 3 jobs\r\x1b[2J\x1b[31mred\x1b[0m\x07 and slept";
+    const lines = buildSleepCard(theme, sleepArgs({ summary: nasty }), 68);
+    for (const line of lines) assert.equal(strip(line).length, 68);
+    const text = lines.map(strip).join("\n");
+    assert.ok(!text.includes("\r"), "carriage return survived");
+    assert.ok(!text.includes("\x07"), "bell survived");
+    assert.match(text, /Reviewed 3 jobs/);
+    assert.match(text, /and slept/);
+  });
+
+  it("never exceeds the width on a very narrow terminal", () => {
+    // rowSplit reserves a gap column; without it the right half alone could
+    // fill innerW and push the row one column past the border.
+    for (let width = 12; width <= 46; width++) {
+      for (const line of buildSleepCard(theme, sleepArgs(), width)) {
+        assert.equal(strip(line).length, width, `width ${width}`);
+      }
     }
   });
 
@@ -165,7 +190,9 @@ describe("cycleDelta", () => {
     };
     const d = cycleDelta(cumulative, previous, "2026-08-07T03:00:00Z", "2026-08-07T02:46:00Z")!;
     assert.equal(d.toolCalls, 27);
-    assert.equal(d.tokens, 2000 + 200 + 100);
+    // reasoning is a subset of output, so it must NOT be added to tokens
+    assert.equal(d.tokens, 2000 + 200);
+    assert.equal(d.reasoningTokens, 100);
     assert.equal(Number(d.costUsd.toFixed(2)), 0.62);
     assert.equal(d.wallClockMs, 14 * 60_000);
   });
@@ -173,13 +200,31 @@ describe("cycleDelta", () => {
   it("treats the first cycle's cumulative as its own delta", () => {
     const d = cycleDelta(cumulative, null, "2026-08-07T03:00:00Z", null)!;
     assert.equal(d.toolCalls, 100);
-    assert.equal(d.tokens, 10_500);
+    assert.equal(d.tokens, 10_000);
+    assert.equal(d.reasoningTokens, 500);
     assert.equal(d.wallClockMs, 900_000);
   });
 
   it("never reports a negative cost when the session is replayed", () => {
     const d = cycleDelta(cumulative, { usage: { costTotal: 99 } }, null, null)!;
     assert.equal(d.costUsd, 0);
+  });
+
+  it("excludes the sleep from this cycle's working time", () => {
+    // Boundary-to-boundary is 6h 14m, but 6h of that was spent asleep.
+    const sixHours = 6 * 3600_000;
+    const d = cycleDelta(cumulative, {}, "2026-08-07T09:14:00Z", "2026-08-07T03:00:00Z", sixHours)!;
+    assert.equal(d.wallClockMs, 14 * 60_000, "working time must exclude the sleep");
+    assert.equal(d.elapsedMs, sixHours + 14 * 60_000, "elapsed keeps the sleep");
+  });
+
+  it("reads pre-split logs that stored totals under `stats`", () => {
+    // Older versions wrote `stats`; without the fallback the first cycle after
+    // an upgrade reports the whole session as one cycle.
+    const previousStats = { toolCalls: 73, usage: { input: 7000, output: 800, costTotal: 3.88 } };
+    const d = cycleDelta(cumulative, previousStats, null, null)!;
+    assert.equal(d.toolCalls, 27);
+    assert.equal(d.tokens, 2000 + 200);
   });
 
   it("returns null when there are no stats at all", () => {

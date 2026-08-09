@@ -1,65 +1,81 @@
+<p>
+  <img src="assets/banner.png" alt="Circadian Loop" width="1100">
+</p>
+
 # Circadian Loop
 
-[![CI](https://github.com/nikheal25/circadian-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/nikheal25/circadian-loop/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/circadian-loop)](https://www.npmjs.com/package/circadian-loop)
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+**Make a [pi](https://pi.dev) agent work on one goal indefinitely. It works, saves everything to disk, sleeps, then wakes with an empty context and carries on. Forever.**
 
-Circadian Loop makes a [pi](https://pi.dev) agent work on one goal indefinitely.
+[![CI](https://img.shields.io/github/actions/workflow/status/nikheal25/circadian-loop/ci.yml?branch=main&style=for-the-badge&label=checks)](https://github.com/nikheal25/circadian-loop/actions/workflows/ci.yml)
+[![pi extension](https://img.shields.io/badge/pi-extension%20%2B%20skill-8b5cf6?style=for-the-badge)](https://github.com/earendil-works/pi-coding-agent)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-blue?style=for-the-badge)]()
 
-A goal can be endless; a context window cannot. Circadian Loop turns the
-goal into a chain of **cycles**: the agent works, checkpoints everything it knows to
-disk, calls `sleep`, and wakes with an empty context to rebuild from those
-files and continue. Forever.
+## Why this exists
 
-Pure extension — no shell scripts, no core patches, works on stock pi.
+Ask an agent to do something genuinely long — track a job market for three months, grind through a migration one module at a time, watch a set of companies — and it dies of context exhaustion. Not because it can't do the work, but because the conversation gets too long. You come back to a compacted, confused agent that has forgotten what it already did and starts repeating itself.
 
-## How it works
+Circadian Loop makes the context window irrelevant. The agent does one task, writes what happened to four small files, and sleeps. When it wakes, its context is **empty** — and it doesn't matter, because everything it needs is on disk. Cycle 400 starts as cleanly as cycle 1.
 
-- **`sleep` tool** — the agent calls it at a stopping point. A countdown
-  screen appears (wake now · ±1h · ±15m · help · stop the loop).
-- **Wake** — when the timer expires (or you pick *Wake now*), the extension
-  compacts the session with instructions to discard everything except a
-  pointer to the on-disk files, then re-injects `loop.md` as the next
-  message. The agent resumes with a near-empty context; the files are its
-  memory.
-- **State on disk** — `loop.md` (the spec, project root) ·
-  `.pi/loop/task.md` · `.pi/loop/inbox.md` · `.pi/loop/handoff.md` ·
-  `loop-results/` (deliverables).
-- **Async human contact** — you talk to the loop by typing into
-  `.pi/loop/inbox.md` whenever you like. The agent reads it at every wake,
-  and a message there outranks everything else it was going to do.
-
-### The files
-
-| Where | What | Who writes |
-|-------|------|------------|
-| `loop.md` (project root) | the loop's spec + every runtime standard | **you** |
-| `.pi/loop/task.md` | the task list | agent |
-| `.pi/loop/inbox.md` | every message between you and the agent | **both** |
-| `.pi/loop/handoff.md` | last cycle's note to the next one | agent |
-| `.pi/loop/work/` | agent scratch space | agent |
-| `.pi/loop/cycles.jsonl` | one record per cycle, for evaluation | extension |
-| `loop-results/` | deliverables | agent |
-
-`loop.md` is yours. Edit the mission, the sleep rhythm, or your rules at any
-time and the next cycle obeys them — no restart needed.
+The second problem is you. You're asleep, or at work, and the agent needs an answer. So it never blocks: the question goes into an inbox file, that task is marked as waiting, and it moves to the next one. You answer whenever — an hour, a week — and the next cycle picks that task back up first.
 
 ## Install
 
+Requires **pi v0.82+** and **Node 22+**. No cloning, no build step.
+
 ```bash
-pi install npm:circadian-loop            # once published
-pi install /path/to/this/folder -l  # or straight from disk, project-local
+pi install npm:circadian-loop
 ```
 
-## Use
+Restart pi after installing.
 
-1. Run `pi` in an empty project and ask it to set up a loop. The bundled
-   `circadian-loop` skill interviews you and writes `loop.md` plus the
-   `.pi/loop/` files. You answer roughly four questions.
-2. `pi --approve` — the agent reads `loop.md`, works, sleeps, wakes,
-   repeats.
-3. Leave notes in `.pi/loop/inbox.md` whenever you want; stop the loop from
-   the sleep screen.
+<details>
+<summary>Other install methods</summary>
+
+From GitHub:
+
+```bash
+pi install git:github.com/nikheal25/circadian-loop
+```
+
+Into one project only (writes `.pi/settings.json` instead of your global settings):
+
+```bash
+pi install npm:circadian-loop -l
+```
+
+Try it for a single run without installing anything:
+
+```bash
+pi -e npm:circadian-loop
+```
+
+</details>
+
+## Quick start
+
+```bash
+mkdir my-loop && cd my-loop
+pi --approve
+```
+
+Then type:
+
+```
+set up a circadian loop
+```
+
+It asks four questions — what the goal is, any rules you want obeyed, how long to sleep between cycles — then writes `loop.md` and starts. That's the whole setup.
+
+## How it works
+
+<p>
+  <img src="assets/how-it-works.png" alt="One cycle: work, checkpoint, sleep, wake — forever" width="1100">
+</p>
+
+**You steer with one file.** `loop.md` holds the mission, your rules, and the sleep rhythm. Edit it any time; the next cycle obeys. No restart.
+
+**Nothing is hidden.** Every file is markdown you can read and edit. There is no database and no state you can't see.
 
 ## The sleep screen
 
@@ -71,8 +87,8 @@ pi install /path/to/this/folder -l  # or straight from disk, project-local
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
 │  5h 48m left                                                 3%  │
 │                                                                  │
-│  Reviewed 3 new job listings against the profile, shortlisted     │
-│  one at Canva and parked a question about salary expectations.    │
+│  Reviewed 3 new job listings, shortlisted one at Canva and       │
+│  parked a question about salary in the inbox.                    │
 │                                                                  │
 │ ▸ Wake now                                                       │
 │   +1h                                                            │
@@ -86,44 +102,67 @@ pi install /path/to/this/folder -l  # or straight from disk, project-local
 ╰──────────────────────────────────────────────────────────────────╯
 ```
 
-**Help** answers "what is this thing actually doing?" — the cycle number,
-the last cycle's handoff note, how many tasks are open / waiting / done,
-what's next, whether anything in your inbox needs you, and what the last
-cycle cost in time, tool calls and tokens. Anything wrong with the loop
-(missing `loop.md`, no open tasks left, a failed compaction, questions you
-haven't answered) is listed under **Needs your attention**.
+**Help** answers "what is this thing actually doing?" — cycle number, the last cycle's note, the mission, how many tasks are open / waiting / done, what's next, whether your inbox needs you, and what the last cycle cost in time, tool calls, tokens and dollars. Problems (no `loop.md`, no tasks left, a failed compaction, an unanswered question) show under **Needs your attention**.
+
+## Talking to it
+
+Open `.pi/loop/inbox.md` and type a bullet under **Your message box**:
+
+```markdown
+## ✍️ Your message box
+- Stop looking at contract roles, permanent only
+```
+
+The next cycle reads that before anything else and does it first. Questions the agent has for you appear in the same file under **Questions for you** — type your answer after `Your answer:` and it resumes that exact task.
+
+## Configuration
+
+Everything lives in `loop.md` at your project root. The sections that change behaviour:
+
+| Section | What it controls |
+|---|---|
+| `## Mission` | What the loop is for. Set once at setup; edit any time. |
+| `## Sleep` | Seconds between cycles, and a longer value for when every task is waiting on you. |
+| `## User rules` | Constraints the agent must obey every cycle — "ask before spending money", "never post publicly". |
+| `## When to stop` | A finish condition, or "never". |
+| `## Task standard` | How `task.md` is maintained. |
+
+Add your own `##` sections and they bind the agent exactly like the built-in ones.
+
+## The `sleep` tool
+
+The agent calls this itself at the end of a cycle. You never call it.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `summary` | string, required | One-line status shown on the countdown screen. Display only — the durable record is `handoff.md`. |
+| `durationSeconds` | number, optional | How long to sleep. Taken from `## Sleep` in `loop.md`. Defaults to 600. |
 
 ## Evaluation data
 
-Every boundary appends JSON Lines to `.pi/loop/cycles.jsonl`: a `sleep`
-record when the cycle ends and a `wake` record when the context is cleared.
-Each `sleep` record carries two separate blocks:
+Each cycle appends a record to `.pi/loop/cycles.jsonl`:
 
-- **`cycle`** — this cycle alone. Tokens, cost, tool calls, wall-clock.
-  These are the numbers to quote.
-- **`cumulative`** — session-to-date totals straight from pi's session
-  branch. Not a per-cycle measurement; `cycle` is derived by subtracting the
-  previous sleep's `cumulative`.
+| Field | What it is |
+|---|---|
+| `cycle` | **this cycle alone** — tokens, cost, tool calls, wall-clock. Quote these. |
+| `cumulative` | session-to-date totals. Not a per-cycle number. |
+| `wake` | whether the boundary succeeded, tokens before → after, how much was cut |
+| `user_message` | every message you typed, with a timestamp |
 
-The file also records human interventions (`user_message`), sleep-screen
-actions, and unplanned mid-cycle compactions.
+The file stays on your machine and is never sent anywhere. The shipped `.gitignore` excludes it — see [SECURITY.md](SECURITY.md).
 
-## Development
+## Limitations
 
-```bash
-npm test    # renders the cards and checks the layout invariants
-```
+- **The agent must cooperate.** `sleep` is a tool it chooses to call. A model that ignores the instruction in `loop.md` will not loop. Stronger models hold the protocol better.
+- **A cycle is not a new session.** The boundary is a context compaction inside one pi session, so the session file grows even though the context does not. Very long-lived loops produce large session files.
+- **Costs run while you're away.** That is the point, but it is real money. Use `## User rules` to constrain what the agent may spend, and check the Help screen's per-cycle cost.
+- **One task per cycle by design.** If you want throughput, shorten the sleep interval rather than expecting parallel work.
+- **`cycles.jsonl` grows without bound**, and the Help screen only reads the last 256 KB of it.
+- **Terminal-first.** Headless modes (`--print`, `rpc`, `json`) sleep correctly, but the countdown screen and Help are TUI only.
 
-The extension is a single TypeScript file that pi compiles at load time; it
-has no build step. `buildSleepCard`, `buildHelpCard`, `readLoopStatus` and
-`cycleDelta` are exported as pure functions so the layout and the metrics
-can be tested without a terminal.
+## Docs
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Release notes are in
-[CHANGELOG.md](CHANGELOG.md); security reporting is in
-[SECURITY.md](SECURITY.md).
+[Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Roadmap](TODO.md)
 
 ## License
 

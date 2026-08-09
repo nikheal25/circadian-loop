@@ -84,6 +84,60 @@ describe("readLoopStatus", () => {
     assert.ok(s.warnings.some((w) => w.includes("waiting on you")));
   });
 
+  it("reports no open questions for the shipped inbox template", () => {
+    // The template documents the question format inside an HTML comment.
+    // Counting that as a real question gave every fresh loop a permanent
+    // phantom "1 question waiting on you" warning.
+    const boot = fs.readFileSync(
+      path.join(import.meta.dirname, "../.pi/skills/circadian-loop/bootstrap.md"),
+      "utf8",
+    );
+    const template = /# Template: `\.pi\/loop\/inbox\.md`\s*```markdown\n([\s\S]*?)```/.exec(boot);
+    assert.ok(template, "inbox template not found in bootstrap.md");
+    const root = makeLoop({ "loop.md": LOOP_MD, ".pi/loop/inbox.md": template[1]! });
+    const s = readLoopStatus(root);
+    assert.equal(s.openQuestions, 0);
+    assert.ok(!s.warnings.some((w) => w.includes("waiting on you")), s.warnings.join(" | "));
+  });
+
+  it("treats a placeholder comment as an unanswered question", () => {
+    const inbox = [
+      "# Inbox",
+      "## Questions for you",
+      "### Q1 - task: pick a region",
+      "Which regions count as remote?",
+      "Your answer:",
+      "",
+    ].join("\n");
+    const root = makeLoop({ "loop.md": LOOP_MD, ".pi/loop/inbox.md": inbox });
+    assert.equal(readLoopStatus(root).openQuestions, 1);
+  });
+
+  it("does not truncate a mission containing the letter z", () => {
+    // JavaScript has no \Z anchor; using one made the section end at the
+    // first literal "z", so "Optimize the analyzer" became "Optimi".
+    const root = makeLoop({
+      "loop.md": "# Loop\n\n## Mission\nOptimize the analyzer for speed.\n\n## Sleep\n600\n",
+    });
+    assert.equal(readLoopStatus(root).mission, "Optimize the analyzer for speed.");
+  });
+
+  it("still counts a question as open when a note follows the answer line", () => {
+    const inbox = [
+      "# Inbox",
+      "",
+      "## Questions for you",
+      "",
+      "### Q1 - 2026-08-08 - task: Confirm the salary floor",
+      "What is the lowest base worth flagging?",
+      "Your answer:",
+      "Blocks: task 2",
+      "",
+    ].join("\n");
+    const root = makeLoop({ "loop.md": LOOP_MD, ".pi/loop/inbox.md": inbox });
+    assert.equal(readLoopStatus(root).openQuestions, 1);
+  });
+
   it("counts unread messages in the message box only", () => {
     const inbox = INBOX_MD.replace(
       "## ✍️ Your message box\n",
@@ -137,14 +191,18 @@ describe("readLoopStatus", () => {
     assert.equal(readLoopStatus(root).cycle, 1);
   });
 
-  it("warns when the last compaction or the last wake failed", () => {
-    const root = makeLoop({
+  it("warns when the last compaction failed but not when it was skipped", () => {
+    const failed = makeLoop({
       "loop.md": LOOP_MD,
-      ".pi/loop/cycles.jsonl":
-        '{"event":"sleep"}\n{"event":"wake","compaction":"failed"}\n{"event":"wake_failed","error":"boom"}\n',
+      ".pi/loop/cycles.jsonl": '{"event":"sleep"}\n{"event":"wake","compaction":"failed"}\n',
     });
-    const w = readLoopStatus(root).warnings;
-    assert.ok(w.some((x) => x.includes("last compaction failed")));
-    assert.ok(w.some((x) => x.includes("last wake failed")));
+    assert.ok(readLoopStatus(failed).warnings.some((x) => x.includes("last compaction failed")));
+
+    // A short cycle with nothing worth summarizing is normal, not a fault.
+    const skipped = makeLoop({
+      "loop.md": LOOP_MD,
+      ".pi/loop/cycles.jsonl": '{"event":"sleep"}\n{"event":"wake","compaction":"skipped"}\n',
+    });
+    assert.ok(!readLoopStatus(skipped).warnings.some((x) => x.includes("compaction")));
   });
 });

@@ -36,6 +36,8 @@
   "files": [
     ".pi/extensions/circadian-loop",
     ".pi/skills/circadian-loop",
+    "assets/banner.png",
+    "assets/how-it-works.png",
     "README.md",
     "CHANGELOG.md",
     "SECURITY.md",
@@ -61,7 +63,8 @@
     ],
     "skills": [
       ".pi/skills/circadian-loop"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/nikheal25/circadian-loop/main/assets/banner.png"
   },
   "publishConfig": {
     "access": "public"

@@ -32,6 +32,15 @@ const MIN_SLEEP_MS = 10_000; // floor when the user shortens the timer
 const BOUNDARY_SETTLE_MS = 1000; // grace before a boundary stops counting as ours
 const LOG_TAIL_BYTES = 262_144; // how much of the cycle log we scan for the last sleep
 
+// How a sleep ended. "aborted" is distinct from "stopped": the user
+// interrupting the run must neither shut pi down nor start a new cycle.
+type SleepOutcome = "woke" | "stopped" | "aborted";
+
+// Set while a sleep overlay is on screen. pi hides overlays on session
+// invalidation without calling dispose(), so this is the only handle that can
+// settle the tool call in that case.
+let closeActiveOverlay: (() => void) | null = null;
+
 // Menu actions offered on the sleep overlay. Order = display order.
 type MenuAction = "wake" | "add1h" | "sub1h" | "add15m" | "sub15m" | "help" | "stop";
 const MENU: { action: MenuAction; label: string }[] = [
@@ -86,16 +95,15 @@ const COMPACT_INSTRUCTIONS =
   "not yet saved to disk that would be truly lost, note only that one " +
   "thing. Keep the summary under 100 words.";
 
-// Sent after an UNPLANNED compaction (threshold/overflow), which pi summarizes
-// with its own instructions and which therefore leaves the agent with no
-// pointer back to the loop. This is the guarantee layer: whatever else was
-// lost, the agent is told where its memory lives.
+// Sent after an UNPLANNED compaction (threshold/overflow). pi summarizes with
+// its own instructions, which know nothing about this loop, so the summary can
+// drop the pointer to the loop files. Compaction keeps recent messages
+// (keepRecentTokens, 20k by default) so the agent is not amnesiac — this only
+// needs to point it back at the files.
 const REORIENT_MESSAGE =
-  "Your context was just compacted mid-cycle — this was NOT a sleep/wake " +
-  "boundary, so do not treat it as the start of a new cycle. Re-read loop.md " +
-  "at the project root, then .pi/loop/task.md, .pi/loop/inbox.md and " +
-  ".pi/loop/handoff.md, and continue the cycle you were already in. Do not " +
-  "redo work that handoff.md or task.md already records as finished.";
+  "Your context was just compacted. Before continuing, re-read loop.md at the " +
+  "project root and .pi/loop/task.md, .pi/loop/inbox.md and " +
+  ".pi/loop/handoff.md, and work from those files rather than from memory.";
 
 export default function (pi: ExtensionAPI) {
   // True only while OUR compaction (the sleep boundary) is in flight, so the
@@ -121,6 +129,20 @@ export default function (pi: ExtensionAPI) {
   // acting. This is the data for measuring human interventions and for
   // auditing exactly what the user said and when.
   // ---------------------------------------------------------------
+  // appendCycleLog is reachable from the input and compaction handlers long
+  // before the first sleep. Until the root is known it would resolve against
+  // process.cwd() and create a stray .pi/loop/ in an unrelated directory.
+  pi.on("session_start", async (_event: any, ctx: any) => {
+    logRoot = projectRoot(ctx);
+  });
+
+  // /new, /resume and /fork tear the session down and hide any overlay
+  // WITHOUT calling its dispose(). Without this the sleep tool call would
+  // never return and the loop would die with a live timer attached.
+  pi.on("session_shutdown", async (_event: any, _ctx: any) => {
+    closeActiveOverlay?.();
+  });
+
   pi.on("input", async (event: any, _ctx: any) => {
     if (event.source === "interactive") {
       appendCycleLog({ event: "user_message", at: nowIso(), text: event.text });
@@ -137,13 +159,22 @@ export default function (pi: ExtensionAPI) {
   // ---------------------------------------------------------------
   pi.on("session_compact", async (event: any, ctx: any) => {
     if (boundaryInFlight) return;
+    // willRetry means pi is about to re-run the aborted turn itself. Injecting
+    // a message on top of that duplicates the turn, so only log it.
+    const willRetry = event?.willRetry === true;
     appendCycleLog({
       event: "unplanned_compaction",
       at: nowIso(),
       reason: event?.reason ?? null,
       willRetry: event?.willRetry ?? null,
+      reoriented: !willRetry,
     });
-    trySendUserMessage(pi, ctx, REORIENT_MESSAGE, "followUp");
+    if (willRetry) return;
+    // pi also compacts from INSIDE prompt(), before the run is marked active.
+    // Sending synchronously there would start a second, concurrent agent run.
+    // Deferring a tick lets the outer run register, so followUp queues behind
+    // it instead of racing it.
+    setTimeout(() => sendUserMessage(pi, ctx, REORIENT_MESSAGE), 0);
   });
 
   // ---------------------------------------------------------------
@@ -203,6 +234,10 @@ export default function (pi: ExtensionAPI) {
       // burns the budget. Wait out the timer, honouring cancellation.
       if (ctx.mode !== "tui") {
         await waitAborting(durationS * 1000, signal);
+        if (signal?.aborted) {
+          appendCycleLog({ event: "aborted", at: nowIso(), sleptMs: Date.now() - startedAt });
+          return { content: [{ type: "text", text: "Sleep interrupted — no new cycle started." }], details: {} };
+        }
         wakeByCompact(pi, ctx, root, Date.now() - startedAt, beginBoundary, endBoundary);
         return {
           content: [{ type: "text", text: `Slept ${durationS}s — compacting into a fresh cycle.` }],
@@ -210,10 +245,17 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      const { stopped } = await showSleepOverlay(ctx, root, params.summary, durationS * 1000);
+      const { outcome } = await showSleepOverlay(ctx, root, params.summary, durationS * 1000, signal);
       const sleptMs = Date.now() - startedAt;
 
-      if (stopped) {
+      if (outcome === "aborted") {
+        // The user interrupted, or the session was torn down. Do not compact
+        // and do not start a cycle — whatever they do next is theirs.
+        appendCycleLog({ event: "aborted", at: nowIso(), sleptMs });
+        return { content: [{ type: "text", text: "Sleep interrupted — no new cycle started." }], details: {} };
+      }
+
+      if (outcome === "stopped") {
         // "Stop the loop": end the process via pi's own ctx.shutdown() API.
         // The loop halts until the user runs `pi` again.
         appendCycleLog({ event: "stopped", at: nowIso(), sleptMs });
@@ -246,16 +288,30 @@ function wakeByCompact(
   onStart: () => void,
   onSettled: () => void,
 ): void {
+  // pi invokes onComplete INSIDE its own try/catch: if onComplete throws, pi
+  // then also runs onError. Without this guard that would start two cycles
+  // from one boundary — two loop.md messages, two agents' worth of work.
+  let woken = false;
   const wake = () => {
+    if (woken) return;
+    woken = true;
     const loop = read(root, LOOP_MD);
     const message =
       loop !== null
         ? loop
         : "No loop is set up yet (loop.md is missing at the project root). " +
           "Set it up by following the circadian-loop skill (its bootstrap).";
-    // If this send fails the loop is dead and silent, so it is the one call
-    // here that must never be left unguarded.
-    trySendUserMessage(pi, ctx, message, "followUp");
+    sendUserMessage(pi, ctx, message);
+  };
+  // Nothing inside a compaction callback may throw — see `woken` above.
+  const settle = (record: Record<string, unknown>) => {
+    try {
+      appendCycleLog(record);
+    } catch {
+      // logging is never worth losing a cycle over
+    }
+    wake();
+    onSettled();
   };
   const startedAt = Date.now();
   onStart();
@@ -264,7 +320,7 @@ function wakeByCompact(
     onComplete: (result: { summary: string; tokensBefore: number; estimatedTokensAfter?: number }) => {
       const before = result?.tokensBefore ?? null;
       const after = result?.estimatedTokensAfter ?? null;
-      appendCycleLog({
+      settle({
         event: "wake",
         at: nowIso(),
         compaction: "ok",
@@ -278,66 +334,67 @@ function wakeByCompact(
             ? Math.round(((before - after) / before) * 100)
             : null,
         carriedSummary: result?.summary ?? null,
-        sessionId: ctx?.sessionManager?.getSessionId?.() ?? null,
+        sessionId: safeSessionId(ctx),
       });
-      wake();
-      onSettled();
     },
     onError: (error: Error) => {
-      appendCycleLog({
+      // pi rejects with "Nothing to compact (session too small)" / "Already
+      // compacted" when a cycle did too little to be worth summarizing. That
+      // is a normal short cycle, not a fault, and must not raise the alarm
+      // the help screen shows for a genuinely failed boundary.
+      const detail = error?.message ?? String(error);
+      const nothingToDo = /nothing to compact|already compacted/i.test(detail);
+      settle({
         event: "wake",
         at: nowIso(),
-        compaction: "failed",
+        compaction: nothingToDo ? "skipped" : "failed",
         compactionMs: Date.now() - startedAt,
         sleptMs,
-        error: error?.message ?? String(error),
-        // Failed compaction = nothing was cut; the next cycle carries the FULL
-        // previous context. Log the current size so the growth is visible.
-        contextTokens: ctx?.getContextUsage?.()?.tokens ?? null,
-        sessionId: ctx?.sessionManager?.getSessionId?.() ?? null,
+        error: detail,
+        // Nothing was cut, so the next cycle carries the FULL previous
+        // context. Log the current size so the growth stays visible.
+        contextTokens: safeContextTokens(ctx),
+        sessionId: safeSessionId(ctx),
       });
-      wake();
-      onSettled();
     },
   });
 }
 
-// pi.sendUserMessage throws when the agent is streaming and no delivery mode
-// is given, and its rejection would otherwise be swallowed — which would stop
-// the loop forever with no visible cause. Try the plain call, fall back to an
-// explicit delivery mode, and if even that fails, say so loudly.
-function trySendUserMessage(
-  pi: ExtensionAPI,
-  ctx: any,
-  message: string,
-  fallbackDeliverAs: "steer" | "followUp",
-): void {
-  const report = (error: unknown) => {
+// Send the message that starts the next cycle.
+//
+// Two things about `pi.sendUserMessage` drive this code:
+//
+// 1. It returns `void`, not a Promise. Internally pi does
+//    `this.sendUserMessage(...).catch(err => runner.emitError(...))`, so a
+//    rejection never reaches us — there is nothing to `await` and nothing to
+//    `.catch`. Any "retry on rejection" logic here would be dead code.
+// 2. Without `deliverAs` it throws when the agent is mid-turn, and it calls
+//    `prompt()` re-entrantly when the agent is idle-but-inside-`prompt()`
+//    (which is exactly where an unplanned compaction fires).
+//
+// So: ALWAYS pass an explicit delivery mode. `streamingBehavior` is ignored
+// when the agent is idle, which makes "followUp" free — it is correct whether
+// or not a turn is in flight.
+//
+// The try/catch below only catches a SYNCHRONOUS throw (a stale context).
+// Asynchronous failures — no API key, expired auth, provider down — reject
+// inside pi and surface as pi's own error banner, not here. There is no
+// extension API that observes them, so `wake_failed` records the cases we can
+// see and the rest are visible to the user through pi itself.
+function sendUserMessage(pi: ExtensionAPI, ctx: any, message: string): void {
+  try {
+    pi.sendUserMessage(message, { deliverAs: "followUp" });
+  } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     appendCycleLog({ event: "wake_failed", at: nowIso(), error: detail });
     try {
-      ctx?.ui?.notify?.(`Circadian Loop could not resume the loop: ${detail}`, "error");
+      ctx?.ui?.notify?.(
+        `Circadian Loop could not start the next cycle: ${detail}. ` +
+          `The loop has stopped — send any message to restart it.`,
+        "error",
+      );
     } catch {
       // notify is best-effort; the log line above is the durable record
-    }
-  };
-  const send = (options?: { deliverAs: "steer" | "followUp" }): unknown =>
-    options ? (pi as any).sendUserMessage(message, options) : (pi as any).sendUserMessage(message);
-  const settle = (value: unknown, onFail: (error: unknown) => void) => {
-    if (value && typeof (value as Promise<unknown>).catch === "function") {
-      (value as Promise<unknown>).catch(onFail);
-    }
-  };
-  try {
-    settle(send(), () => retry());
-  } catch {
-    retry();
-  }
-  function retry(): void {
-    try {
-      settle(send({ deliverAs: fallbackDeliverAs }), report);
-    } catch (error) {
-      report(error);
     }
   }
 }
@@ -413,7 +470,9 @@ function makeFrame(t: CardTheme, width: number) {
     left: { s: string; color: string; bold?: boolean },
     right: { s: string; color: string; bold?: boolean },
   ): string => {
-    const rightText = truncateToWidth(right.s, innerW, "…");
+    // Reserve one column for the gap so the two halves can never sum past
+    // innerW — on a very narrow terminal the right half alone could fill it.
+    const rightText = truncateToWidth(right.s, Math.max(0, innerW - 1), "…");
     const leftRoom = Math.max(0, innerW - visibleWidth(rightText) - 1);
     const leftText = truncateToWidth(left.s, leftRoom, "…");
     const spacer = Math.max(1, innerW - visibleWidth(leftText) - visibleWidth(rightText));
@@ -483,7 +542,7 @@ export function buildSleepCard(
   const pct = args.durationMs > 0 ? Math.min(1, elapsed / args.durationMs) : 1;
   const wakeAtMs = Date.now() + args.remaining;
 
-  const wrapped = wrapTextWithAnsi(args.summary.trim() || "(no summary)", f.innerW);
+  const wrapped = wrapTextWithAnsi(sanitize(args.summary).trim() || "(no summary)", f.innerW);
   const shown = wrapped.slice(0, MAX_SUMMARY_LINES);
   if (wrapped.length > MAX_SUMMARY_LINES && shown.length > 0) {
     const last = shown.length - 1;
@@ -551,11 +610,17 @@ export function readLoopStatus(root: string): LoopStatus {
     warnings.push("No open tasks left — the loop will wake with nothing queued.");
   }
 
-  // "### Q3 · …" entries whose "Your answer:" line is still empty.
-  const questionBlocks = (inbox ?? "").split(/^###\s+/m).slice(1);
+  // "### Q3 · …" entries whose "Your answer:" line is still empty. HTML
+  // comments are stripped first: the shipped inbox template documents the
+  // question format inside a comment, and without this every pristine loop
+  // reports a phantom unanswered question forever.
+  const questionBlocks = (inbox ?? "").replace(/<!--[\s\S]*?-->/g, "").split(/^###\s+/m).slice(1);
   const unanswered = questionBlocks.filter((block) => {
-    const answer = /Your answer:(.*)$/ms.exec(block);
-    return !answer || answer[1]!.replace(/-->/g, "").trim() === "";
+    // Only the remainder of the "Your answer:" LINE counts. With the /s flag
+    // this swallowed every following line, so any question with a trailing
+    // note read as answered.
+    const answer = /^[^\S\n]*Your answer:(.*)$/m.exec(block);
+    return !answer || answer[1]!.trim() === "";
   });
   if (unanswered.length > 0) {
     warnings.push(`${unanswered.length} question(s) waiting on you in the inbox.`);
@@ -581,11 +646,11 @@ export function readLoopStatus(root: string): LoopStatus {
   return {
     cycle: cycleNo,
     mission: section(loop, "Mission"),
-    handoff: handoff ? handoff.trim().split("\n").filter(Boolean).join(" ") : null,
+    handoff: handoff ? sanitize(handoff).trim().split("\n").filter(Boolean).join(" ") : null,
     openTasks: open.length,
     waitingTasks: waiting.length,
     doneTasks: done.length,
-    nextTask: open[0]?.replace(/^-\s*\[\s\]\s*/, "") ?? null,
+    nextTask: open[0] ? sanitize(open[0].replace(/^-\s*\[\s\]\s*/, "")) : null,
     openQuestions: unanswered.length,
     unreadMessages: unread,
     lastCycle: {
@@ -663,15 +728,16 @@ async function showSleepOverlay(
   root: string,
   summary: string,
   durationMs: number,
-): Promise<{ stopped: boolean }> {
+  signal: AbortSignal | undefined,
+): Promise<{ outcome: SleepOutcome }> {
   return ctx.ui.custom(
-    (tui: any, theme: any, _kb: any, done: (result: { stopped: boolean }) => void) => {
+    (tui: any, theme: any, _kb: any, done: (result: { outcome: SleepOutcome }) => void) => {
       const start = Date.now();
       let endAt = start + durationMs; // mutable: the +/- actions shift this
       let timer: ReturnType<typeof setInterval> | null = null;
       let finished = false;
       let tick = 0;
-      let stopped = false;
+      let outcome: SleepOutcome = "woke";
 
       // menu / help state
       let mode: "menu" | "help" = "menu";
@@ -680,21 +746,47 @@ async function showSleepOverlay(
       // render(), which runs on every tick.
       let status: LoopStatus | null = null;
 
-      const wake = () => {
+      const finish = (result: SleepOutcome) => {
         if (finished) return;
         finished = true;
-        if (timer) clearInterval(timer);
-        done({ stopped });
-      };
-
-      timer = setInterval(() => {
-        tick++;
-        if (Date.now() >= endAt) {
-          wake();
-          return;
+        outcome = result;
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
         }
-        tui.requestRender();
-      }, TICK_MS);
+        signal?.removeEventListener("abort", onAbort);
+        closeActiveOverlay = null;
+        done({ outcome });
+      };
+      const wake = () => finish("woke");
+
+      // The user aborted the run (ctrl-C, /stop). Nothing in pi hides an
+      // overlay on abort, so without this the countdown stays on screen with a
+      // live timer and later resolves into a compaction on top of whatever the
+      // user has since started doing. Aborting is NOT "Stop the loop": it must
+      // not shut pi down and must not start a new cycle.
+      const onAbort = () => finish("aborted");
+
+      if (signal?.aborted) {
+        // Already aborted: settle immediately and never start the interval.
+        finished = true;
+        outcome = "aborted";
+        done({ outcome });
+      } else {
+        signal?.addEventListener("abort", onAbort, { once: true });
+        // pi hides the overlay without calling dispose() when the session is
+        // invalidated (/new, /resume, /fork). Registering here is what stops
+        // the tool call hanging forever in that case — see session_shutdown.
+        closeActiveOverlay = () => finish("aborted");
+        timer = setInterval(() => {
+          tick++;
+          if (Date.now() >= endAt) {
+            wake();
+            return;
+          }
+          tui.requestRender();
+        }, TICK_MS);
+      }
 
       const remainingMs = () => Math.max(0, endAt - Date.now());
       const totalMs = () => Math.max(MIN_SLEEP_MS, endAt - start);
@@ -714,8 +806,7 @@ async function showSleepOverlay(
             wake();
             return true;
           case "stop":
-            stopped = true;
-            wake();
+            finish("stopped");
             return true;
           case "add1h":
             endAt += 3_600_000;
@@ -754,6 +845,11 @@ async function showSleepOverlay(
               )
             : buildHelpCard(theme, { remaining: remainingMs(), status: status ?? readLoopStatus(root) }, width),
         invalidate: () => {},
+        // pi hides the overlay without resolving our promise on /reload, /new
+        // and session invalidation. Without dispose() the tool call would hang
+        // forever — the loop would silently die — and the interval would keep
+        // firing against a detached component.
+        dispose: () => finish("aborted"),
         handleInput: (data: string): void => {
           if (mode === "menu") {
             if (matchesKey(data, Key.up)) {
@@ -768,6 +864,12 @@ async function showSleepOverlay(
           } else if (matchesKey(data, Key.escape)) {
             mode = "menu";
             tui.requestRender();
+          }
+          // A focused overlay receives ctrl-c itself; if we ignored it the
+          // terminal would be locked for the whole countdown, which for a
+          // multi-hour sleep is indistinguishable from a hang.
+          if (matchesKey(data, Key.ctrl("c"))) {
+            finish("aborted");
           }
         },
       };
@@ -785,8 +887,39 @@ async function showSleepOverlay(
 
 // ─── Small helpers ───
 
+// Text from the model (the sleep summary) or from files the user edits can
+// contain control characters and raw escape sequences. `\r` measures as one
+// column but returns the cursor to column 0, and a stray CSI can clear the
+// screen — either corrupts every row the overlay composited. Strip them
+// before anything is measured or drawn.
+function sanitize(text: string): string {
+  return text
+    .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "")
+    .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+    .replace(/\r\n?/g, "\n");
+}
+
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+// ctx accessors used inside compaction callbacks, where a throw would make pi
+// run onError after onComplete and start the cycle twice.
+function safeSessionId(ctx: any): string | null {
+  try {
+    return ctx?.sessionManager?.getSessionId?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function safeContextTokens(ctx: any): number | null {
+  try {
+    return ctx?.getContextUsage?.()?.tokens ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function num(v: unknown): number | null {
@@ -823,9 +956,11 @@ function waitAborting(ms: number, signal?: AbortSignal): Promise<void> {
 // Pull one "## Heading" section's body out of a markdown document.
 function section(doc: string | null, heading: string): string | null {
   if (!doc) return null;
-  const re = new RegExp(`^##\\s+${heading}\\s*$([\\s\\S]*?)(?=^##\\s|\\Z)`, "mi");
+  // NB: JavaScript has no \Z anchor — using one here silently truncated the
+  // section at the first letter "z". End on the next heading or end-of-input.
+  const re = new RegExp(`^##\\s+${heading}\\s*$([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, "mi");
   const body = re.exec(doc)?.[1]?.trim();
-  return body ? body.split("\n").filter(Boolean).join(" ") : null;
+  return body ? sanitize(body).split("\n").filter(Boolean).join(" ") : null;
 }
 
 // ─── Disk ───
@@ -866,10 +1001,16 @@ function readCycleLog(root: string): Record<string, any>[] {
     const size = fs.statSync(file).size;
     const from = Math.max(0, size - LOG_TAIL_BYTES);
     const fd = fs.openSync(file, "r");
+    let read = 0;
     const buf = Buffer.alloc(size - from);
-    fs.readSync(fd, buf, 0, buf.length, from);
-    fs.closeSync(fd);
-    const text = from > 0 ? buf.toString("utf8").slice(buf.toString("utf8").indexOf("\n") + 1) : buf.toString("utf8");
+    try {
+      read = fs.readSync(fd, buf, 0, buf.length, from);
+    } finally {
+      fs.closeSync(fd);
+    }
+    const raw = buf.toString("utf8", 0, read);
+    // A tail read almost always starts mid-line; drop that fragment.
+    const text = from > 0 ? raw.slice(raw.indexOf("\n") + 1) : raw;
     const out: Record<string, any>[] = [];
     for (const line of text.split("\n")) {
       if (!line.trim()) continue;
@@ -968,25 +1109,39 @@ export function cycleDelta(
   previous: Record<string, any> | null | undefined,
   sleepEndedAt: string | null,
   previousEndedAt: string | null | undefined,
+  // How long the PREVIOUS cycle spent asleep. Boundary-to-boundary elapsed
+  // time includes that sleep, so without subtracting it a 6-hour rhythm
+  // reports every cycle as ~6 hours of work.
+  previousSleptMs?: number | null,
 ): Record<string, any> | null {
   if (!cumulative) return null;
   const prev = previous ?? null;
   const sub = (a: number | undefined, b: number | undefined): number => (a ?? 0) - (b ?? 0);
   const u = cumulative.usage ?? {};
   const pu = prev?.usage ?? {};
-  const wall =
+  const elapsed =
     sleepEndedAt && previousEndedAt
       ? Date.parse(sleepEndedAt) - Date.parse(previousEndedAt)
       : (cumulative.wallClockMs ?? null);
+  const slept = typeof previousSleptMs === "number" && previousSleptMs > 0 ? previousSleptMs : 0;
+  const wall = elapsed !== null && Number.isFinite(elapsed) ? Math.max(0, elapsed - slept) : null;
   return {
     userMessages: sub(cumulative.userMessages, prev?.userMessages),
     assistantTurns: sub(cumulative.assistantTurns, prev?.assistantTurns),
     toolCalls: sub(cumulative.toolCalls, prev?.toolCalls),
     toolErrors: sub(cumulative.toolErrors, prev?.toolErrors),
     llmErrors: sub(cumulative.llmErrors, prev?.llmErrors),
-    tokens: sub(u.input, pu.input) + sub(u.output, pu.output) + sub(u.reasoning, pu.reasoning),
+    // `reasoning` is a SUBSET of `output` (pi-ai Usage docs) — adding it would
+    // double-count thinking tokens. Reported separately instead.
+    tokens: sub(u.input, pu.input) + sub(u.output, pu.output),
+    reasoningTokens: sub(u.reasoning, pu.reasoning),
     costUsd: Math.max(0, sub(u.costTotal, pu.costTotal)),
-    wallClockMs: Number.isFinite(wall as number) ? wall : null,
+    cacheReadTokens: sub(u.cacheRead, pu.cacheRead),
+    cacheWriteTokens: sub(u.cacheWrite, pu.cacheWrite),
+    // Time this cycle spent WORKING: boundary-to-boundary minus the sleep.
+    wallClockMs: wall,
+    // Boundary to boundary, sleep included. Kept so the two are never confused.
+    elapsedMs: elapsed !== null && Number.isFinite(elapsed) ? elapsed : null,
   };
 }
 
@@ -1003,7 +1158,14 @@ function writeCycleLog(ctx: any, root: string, summary: string, durationSeconds:
   const usage = ctx?.getContextUsage?.() ?? undefined;
   const model = ctx?.model;
   const cumulative = sessionStats(sm);
-  const previous = [...readCycleLog(root)].reverse().find((r) => r.event === "sleep");
+  const log = readCycleLog(root);
+  const previous = [...log].reverse().find((r) => r.event === "sleep");
+  // Logs written before the cycle/cumulative split stored the same totals under
+  // `stats`. Without this fallback the first cycle after an upgrade reports the
+  // entire session's totals as one cycle.
+  const previousTotals = previous?.cumulative ?? previous?.stats ?? null;
+  // The wake that closed the previous cycle records how long it actually slept.
+  const previousSleptMs = [...log].reverse().find((r) => r.event === "wake")?.sleptMs ?? null;
   const endedAt = nowIso();
   appendCycleLog({
     event: "sleep",
@@ -1028,8 +1190,11 @@ function writeCycleLog(ctx: any, root: string, summary: string, durationSeconds:
     sessionId: sm?.getSessionId?.() ?? null,
     cwd: sm?.getCwd?.() ?? null,
     // This cycle alone. Quote these.
-    cycle: cycleDelta(cumulative, previous?.cumulative, endedAt, previous?.endedAt),
+    cycle: cycleDelta(cumulative, previousTotals, endedAt, previous?.endedAt, previousSleptMs),
     // Session-to-date totals. Not a per-cycle measurement.
     cumulative,
+    // The old name for the same object, kept so anything already reading
+    // `stats` keeps working. Deprecated — read `cycle` or `cumulative`.
+    stats: cumulative,
   });
 }

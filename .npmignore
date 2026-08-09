@@ -2,6 +2,8 @@ test/
 tsconfig.json
 .gitignore
 .github/
+assets/*.svg
+AGENTS.md
 TODO.md
 CONTRIBUTING.md
 CODE_OF_CONDUCT.md

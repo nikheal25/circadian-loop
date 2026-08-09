@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="470" viewBox="0 0 1100 470" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7aa2f7"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#bb9af7"/>
+    </marker>
+  </defs>
+
+  <rect width="1100" height="470" fill="#12141c"/>
+
+  <text x="65" y="42" fill="#e6ebff" font-size="20" font-weight="700">One cycle</text>
+  <text x="163" y="42" fill="#6b7694" font-size="15">— then it starts again, with an empty context</text>
+
+  <!-- stage boxes -->
+  <g>
+    <rect x="65"  y="70" width="220" height="96" rx="12" fill="#1a1f2e" stroke="#2f3850"/>
+    <rect x="315" y="70" width="220" height="96" rx="12" fill="#1a1f2e" stroke="#2f3850"/>
+    <rect x="565" y="70" width="220" height="96" rx="12" fill="#1a1f2e" stroke="#2f3850"/>
+    <rect x="815" y="70" width="220" height="96" rx="12" fill="#1a1f2e" stroke="#2f3850"/>
+  </g>
+
+  <g font-size="12" font-weight="700" letter-spacing="1.6">
+    <text x="85"  y="96" fill="#7aa2f7">1 · WORK</text>
+    <text x="335" y="96" fill="#7aa2f7">2 · CHECKPOINT</text>
+    <text x="585" y="96" fill="#7aa2f7">3 · SLEEP</text>
+    <text x="835" y="96" fill="#bb9af7">4 · WAKE</text>
+  </g>
+
+  <g font-size="14" fill="#c3cae0">
+    <text x="85"  y="122">The topmost open task</text>
+    <text x="85"  y="144">in task.md. One per cycle.</text>
+    <text x="335" y="122">Write task.md, inbox.md</text>
+    <text x="335" y="144">and handoff.md to disk.</text>
+    <text x="585" y="122">Countdown screen.</text>
+    <text x="585" y="144">You can wake it early.</text>
+    <text x="835" y="122">Context is wiped, then</text>
+    <text x="835" y="144">loop.md is re-injected.</text>
+  </g>
+
+  <!-- forward arrows -->
+  <g stroke="#7aa2f7" stroke-width="2" marker-end="url(#ar)">
+    <line x1="288" y1="118" x2="310" y2="118"/>
+    <line x1="538" y1="118" x2="560" y2="118"/>
+    <line x1="788" y1="118" x2="810" y2="118"/>
+  </g>
+
+  <!-- return arrow -->
+  <path d="M 1035 166 L 1035 205 Q 1035 220 1020 220 L 80 220 Q 65 220 65 205 L 65 176"
+        fill="none" stroke="#bb9af7" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#ar2)"/>
+  <rect x="470" y="206" width="160" height="28" rx="14" fill="#12141c"/>
+  <text x="550" y="225" fill="#bb9af7" font-size="13" font-weight="600" text-anchor="middle">forever</text>
+
+  <!-- disk panel -->
+  <rect x="65" y="266" width="970" height="164" rx="12" fill="#161b28" stroke="#2f3850"/>
+  <text x="89" y="298" fill="#e6ebff" font-size="15" font-weight="700">Disk is the only memory</text>
+  <text x="279" y="298" fill="#6b7694" font-size="13">the agent remembers nothing from the cycle before</text>
+
+  <g font-size="13.5">
+    <text x="89" y="332" fill="#9ece6a" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">loop.md</text>
+    <text x="270" y="332" fill="#8b96b8">the mission, your rules, the sleep rhythm</text>
+    <text x="760" y="332" fill="#5c6683">you own this</text>
+
+    <text x="89" y="360" fill="#7aa2f7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">.pi/loop/task.md</text>
+    <text x="270" y="360" fill="#8b96b8">the task list, one line per task</text>
+    <text x="760" y="360" fill="#5c6683">agent owns this</text>
+
+    <text x="89" y="388" fill="#bb9af7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">.pi/loop/inbox.md</text>
+    <text x="270" y="388" fill="#8b96b8">every message between you and the agent</text>
+    <text x="760" y="388" fill="#5c6683">shared — you can write any time</text>
+
+    <text x="89" y="416" fill="#e0af68" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">loop-results/</text>
+    <text x="270" y="416" fill="#8b96b8">the deliverables you actually wanted</text>
+    <text x="760" y="416" fill="#5c6683">agent owns this</text>
+  </g>
+</svg>

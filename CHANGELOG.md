@@ -29,6 +29,10 @@ First public release.
 - Headless support: `sleep` waits out its timer in `print`, `rpc` and `json`
   modes instead of returning immediately.
 
+- `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue
+  and PR templates, and CI on Node 22 and 24.
+- README banner and cycle diagram (`assets/`, SVG sources included).
+
 ### Notes
 - Per-cycle metrics are recorded under `cycle`; session-to-date totals are
   recorded separately under `cumulative`. Quote `cycle`.

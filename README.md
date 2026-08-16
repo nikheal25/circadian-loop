@@ -24,30 +24,26 @@ The second problem is you. You're asleep, or at work, and the agent needs an ans
 Requires **pi v0.82+** and **Node 22+**. No cloning, no build step.
 
 ```bash
-pi install npm:circadian-loop
+pi install git:github.com/nikheal25/circadian-loop
 ```
 
 Restart pi after installing.
 
+> Not on npm yet — `pi install npm:circadian-loop` will 404 until this is published. Use the git install above until then.
+
 <details>
 <summary>Other install methods</summary>
-
-From GitHub:
-
-```bash
-pi install git:github.com/nikheal25/circadian-loop
-```
 
 Into one project only (writes `.pi/settings.json` instead of your global settings):
 
 ```bash
-pi install npm:circadian-loop -l
+pi install git:github.com/nikheal25/circadian-loop -l
 ```
 
 Try it for a single run without installing anything:
 
 ```bash
-pi -e npm:circadian-loop
+pi -e git:github.com/nikheal25/circadian-loop
 ```
 
 </details>

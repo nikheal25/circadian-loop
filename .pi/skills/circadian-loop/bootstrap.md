@@ -32,10 +32,21 @@ Send exactly:
 ```markdown
 ## #mission
 **1 ·** What should this loop achieve, and why? In your own words — short or detailed, both work:
-- "Every morning, find newly published pi agent skills and add them to a rolling list I can browse."
-- "Track remote Python jobs that match my profile and keep a running shortlist with the apply link."
-- "Clean up my dotfiles repo piece by piece — one module per cycle, smallest safe change each time."
-- "Research one company from my watchlist per cycle — financials, news, risks — and keep one report per company up to date. High signal only; anything urgent goes straight to my inbox."
+
+**Monitoring** — watch something and surface what changes
+- "Every morning, scan Hacker News, Reddit, and GitHub for newly published pi agent skills, and add notable ones to a rolling list I can browse — anything that looks like a strong fit for my own agents goes straight to the inbox."
+- "Every morning, pull new AI-agent items from arXiv, Hacker News, and GitHub, and write one dated brief — a TL;DR plus the links worth reading; say 'quiet day' if nothing moved the needle."
+
+**Research** — build one artifact and keep it current over time
+- "Research one holding from my portfolio per cycle — thesis, risks, recent news — and keep one rated report per ticker up to date; anything that changes my read on the position goes straight to the inbox."
+
+**Maintenance** — improve something safely, one piece per cycle
+- "Each cycle, check this app's production API and database — uptime, error rate, latency — and log an incident report the moment any of them crosses a set threshold; page-worthy issues go straight to the inbox."
+- "Every week, scan this repo's dependencies for security advisories and outdated packages, and apply the smallest safe upgrade, one cycle at a time."
+
+**Operations** — recurring personal or admin work
+- "Every morning, check my calendar for today's meetings, scan Gmail for anything relevant to each one, and drop a short prep note per meeting — anything needing a decision from me goes to the inbox."
+- "Every Monday, pull this project's open tasks and blockers into one status update, and flag anything overdue straight to the inbox."
 ```
 
 Anything extra the user volunteers, keep for loop.md: constraints → User

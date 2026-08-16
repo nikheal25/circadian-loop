@@ -33,6 +33,8 @@ Send exactly:
 ## #mission
 **1 ·** What should this loop achieve, and why? In your own words — short or detailed, both work:
 
+*Examples — pick one as-is, adapt one, or ignore all of these and describe your own:*
+
 **Monitoring** — watch something and surface what changes
 - "Every morning, scan Hacker News, Reddit, and GitHub for newly published pi agent skills, and add notable ones to a rolling list I can browse — anything that looks like a strong fit for my own agents goes straight to the inbox."
 - "Every morning, pull new AI-agent items from arXiv, Hacker News, and GitHub, and write one dated brief — a TL;DR plus the links worth reading; say 'quiet day' if nothing moved the needle."
@@ -47,6 +49,8 @@ Send exactly:
 **Operations** — recurring personal or admin work
 - "Every morning, check my calendar for today's meetings, scan Gmail for anything relevant to each one, and drop a short prep note per meeting — anything needing a decision from me goes to the inbox."
 - "Every Monday, pull this project's open tasks and blockers into one status update, and flag anything overdue straight to the inbox."
+
+*These are just examples — use one, adapt one, or write your own in your own words.*
 ```
 
 Anything extra the user volunteers, keep for loop.md: constraints → User

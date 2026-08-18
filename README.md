@@ -9,15 +9,14 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/nikheal25/circadian-loop/ci.yml?branch=main&style=for-the-badge&label=checks)](https://github.com/nikheal25/circadian-loop/actions/workflows/ci.yml)
 [![pi extension](https://img.shields.io/badge/pi-extension%20%2B%20skill-8b5cf6?style=for-the-badge)](https://github.com/earendil-works/pi-coding-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-blue?style=for-the-badge)]()
 
 ## Why this exists
 
-Ask an agent to do something genuinely long — track a job market for three months, grind through a migration one module at a time, watch a set of companies — and it dies of context exhaustion. Not because it can't do the work, but because the conversation gets too long. You come back to a compacted, confused agent that has forgotten what it already did and starts repeating itself.
+**Long tasks kill agent context.** Track a job market for three months, or grind through a migration module by module, and the agent dies of context exhaustion — not because it can't do the work, but because the conversation gets too long. You come back to a compacted, confused agent repeating itself.
 
-Circadian Loop makes the context window irrelevant. The agent does one task, writes what happened to four small files, and sleeps. When it wakes, its context is **empty** — and it doesn't matter, because everything it needs is on disk. Cycle 400 starts as cleanly as cycle 1.
+**Circadian Loop fixes this with disk, not context.** Each cycle: do one task → write what happened to four small files → sleep. On wake, context is **empty** and it doesn't matter — everything needed is on disk. Cycle 400 starts as clean as cycle 1.
 
-The second problem is you. You're asleep, or at work, and the agent needs an answer. So it never blocks: the question goes into an inbox file, that task is marked as waiting, and it moves to the next one. You answer whenever — an hour, a week — and the next cycle picks that task back up first.
+**It never blocks on you.** Need an answer while you're asleep or at work? The question goes into an inbox file, that task waits, and the agent moves to the next one. Answer whenever — the next cycle picks it back up first.
 
 ## Install
 

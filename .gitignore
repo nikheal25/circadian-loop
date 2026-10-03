@@ -3,7 +3,6 @@ node_modules/
 # Loop runtime state. cycles.jsonl (written only with CIRCADIAN_DEBUG=1) records typed messages,
 # so it must never be committed by accident.
 .pi/loop/
-loop-results/
 
 # Local publish runbook — never committed.
 PUBLISH-TO-NPM.md

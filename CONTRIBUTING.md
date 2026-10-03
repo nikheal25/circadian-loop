@@ -19,6 +19,7 @@ Node 22+ is required (the tests use `--experimental-strip-types`).
 test/layout.test.ts                      sleep + help screen rendering
 test/status.test.ts                      loop-file parsing, against real files
 test/debug-log.test.ts                   CIRCADIAN_DEBUG gating of the cycle log
+test/wake.test.ts                        wake starts only after the run settles
 docs/                                    architecture + troubleshooting
 ```
 

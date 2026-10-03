@@ -59,8 +59,6 @@ follow `loop.md`, not this skill.
 | .pi/loop/task.md | task list — topmost open task after inbox work | **agent only** |
 | .pi/loop/inbox.md | every user↔agent message — user has highest precedence | **both** (shared) |
 | .pi/loop/handoff.md | last cycle's paragraph — overwritten each cycle | **agent only** |
-| .pi/loop/work/ | scratch | **agent only** |
-| loop-results/ (project root) | deliverables — minimal, update over create | **agent only** |
 | .pi/loop/cycles.jsonl | optional debug log, written only under `CIRCADIAN_DEBUG=1` | **system only** (never you) |
 
 Bootstrap creates this shape and writes the runtime rules into `loop.md` and
@@ -68,7 +66,7 @@ the inbox template. After setup, the agent follows those generated files.
 
 ## Setup boundary
 
-Bootstrap creates `loop.md`, `.pi/loop/task.md`, `.pi/loop/inbox.md`,
-`.pi/loop/handoff.md`, `.pi/loop/work/`, and `loop-results/`. Do not begin
+Bootstrap creates `loop.md`, `.pi/loop/task.md`,
+`.pi/loop/inbox.md`, and `.pi/loop/handoff.md`. Do not begin
 ordinary loop work until those files exist and the user has chosen whether to
 start now or sleep.

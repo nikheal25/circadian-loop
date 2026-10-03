@@ -88,7 +88,7 @@ You can also just say it in plain words — "set up a circadian loop", or "follo
 
 1. **Wake.** The context is empty. The agent reads `loop.md`, your inbox, the last handoff note and the task list.
 2. **Work.** It does your messages first, then the topmost open task. One task per cycle.
-3. **Checkpoint.** It updates the task list, saves results to `loop-results/`, and overwrites `handoff.md` for its next self.
+3. **Checkpoint.** It updates the task list, saves deliverables where they belong in your project, and overwrites `handoff.md` for its next self.
 4. **Sleep.** It calls `sleep`, the countdown starts, and when it ends the loop wakes again.
 
 ## The sleep screen

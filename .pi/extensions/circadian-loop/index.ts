@@ -6,7 +6,7 @@ import * as path from "node:path";
 
 // ─── Layout ───
 // loop.md lives at the project root (the user-facing spec); the machinery
-// files (task.md, inbox.md, handoff.md, work/) live in .pi/loop/.
+// files (task.md, inbox.md, handoff.md) live in .pi/loop/.
 const LOOP_MD = "loop.md";
 const LOOP_DIR = ".pi/loop";
 const TASK_MD = `${LOOP_DIR}/task.md`;
@@ -90,7 +90,7 @@ const COMPACT_INSTRUCTIONS =
   "compaction. ALL durable state is already checkpointed on disk: loop.md " +
   "(the loop spec, project root), .pi/loop/task.md (tasks), " +
   ".pi/loop/inbox.md (user dialogue), .pi/loop/handoff.md (the last " +
-  "cycle's note), loop-results/ (deliverables). The next cycle must rely " +
+  "cycle's note). The next cycle must rely " +
   "ONLY on those files. Therefore summarize to a few lines at most: state " +
   "that a cycle just ended and was checkpointed to those files, and carry " +
   "over NOTHING else — no task details, no tool outputs, no drafts, no " +
@@ -116,6 +116,9 @@ export default function (pi: ExtensionAPI) {
   // clearing early would make the boundary look unplanned and stack a
   // reorientation message on top of loop.md.
   let boundaryInFlight = false;
+  // Set by the sleep tool when a sleep ends normally; consumed by the
+  // agent_settled handler, which starts the compaction.
+  let pendingWake: { root: string; sleptMs: number } | null = null;
   const beginBoundary = () => {
     boundaryInFlight = true;
   };
@@ -143,7 +146,19 @@ export default function (pi: ExtensionAPI) {
   // WITHOUT calling its dispose(). Without this the sleep tool call would
   // never return and the loop would die with a live timer attached.
   pi.on("session_shutdown", async (_event: any, _ctx: any) => {
+    pendingWake = null;
     closeActiveOverlay?.();
+  });
+
+  // The sleep tool only ARMS the wake; it runs here, once pi has fully stopped
+  // the run the sleep call belonged to. Compacting from inside the tool call
+  // would abort that run, and pi would show the aborted follow-up model
+  // request as "Error: This operation was aborted".
+  pi.on("agent_settled", async (_event: any, ctx: any) => {
+    const wake = pendingWake;
+    if (!wake) return;
+    pendingWake = null;
+    wakeByCompact(pi, ctx, wake.root, wake.sleptMs, beginBoundary, endBoundary);
   });
 
   pi.on("input", async (event: any, _ctx: any) => {
@@ -241,10 +256,11 @@ export default function (pi: ExtensionAPI) {
           appendCycleLog({ event: "aborted", at: nowIso(), sleptMs: Date.now() - startedAt });
           return { content: [{ type: "text", text: "Sleep interrupted — no new cycle started." }], details: {} };
         }
-        wakeByCompact(pi, ctx, root, Date.now() - startedAt, beginBoundary, endBoundary);
+        pendingWake = { root, sleptMs: Date.now() - startedAt };
         return {
           content: [{ type: "text", text: `Slept ${durationS}s — compacting into a fresh cycle.` }],
           details: {},
+          terminate: true,
         };
       }
 
@@ -266,8 +282,12 @@ export default function (pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "Stopped." }], details: {}, terminate: true };
       }
 
-      wakeByCompact(pi, ctx, root, sleptMs, beginBoundary, endBoundary);
-      return { content: [{ type: "text", text: "Waking — compacting into a fresh cycle..." }], details: {} };
+      pendingWake = { root, sleptMs };
+      return {
+        content: [{ type: "text", text: "Waking — compacting into a fresh cycle..." }],
+        details: {},
+        terminate: true,
+      };
     },
   });
 }
@@ -275,9 +295,9 @@ export default function (pi: ExtensionAPI) {
 // Compact, then wake: when compaction finishes, inject loop.md as the next
 // user message — that message starts the next cycle. onError still wakes (a
 // failed compaction must never kill the loop; worse context beats no loop).
-// Fire-and-forget by design: ctx.compact() aborts the current turn internally,
-// so awaiting it from inside the very tool call that belongs to that turn
-// would deadlock.
+// Called from the agent_settled handler, after the sleep run has stopped, so
+// ctx.compact() has no live turn to abort. Still fire-and-forget: it returns
+// at once and reports through the callbacks.
 //
 // Each wake appends its own "wake" line to the cycle log (the sleep tool
 // already appended a "sleep" line), so every boundary records: whether the

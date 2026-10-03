@@ -122,7 +122,6 @@ Create all of these now, in one step:
 loop.md            ← project root — from the template: Mission = the text
                      locked in step 3 · User rules from #rules · Sleep
                      seconds from #rhythm (skip = template defaults)
-loop-results/      ← project root — deliverables folder (empty)
 .pi/loop/
   task.md          ← from the template, with the FIRST FEW tasks already
                      written (derived from the Mission + ground truth)
@@ -130,7 +129,6 @@ loop-results/      ← project root — deliverables folder (empty)
   handoff.md       ← seed line: "Bootstrap done — first task queued, no
                      cycle has run yet." The seed has no cycle number; the
                      first cycle writes `Cycle 1:`.
-  work/            ← empty scratch dir
 ```
 
 (The system may also keep an auto-generated cycle log for evaluation — you
@@ -203,8 +201,6 @@ follow "Each cycle" at the bottom.
 - .pi/loop/task.md — the task list. You maintain it.
 - .pi/loop/inbox.md — all conversation with the user. Both of you write.
 - .pi/loop/handoff.md — the previous cycle's note to you. You overwrite it.
-- .pi/loop/work/ — your scratch space, organized however you like.
-- loop-results/ — deliverables for the user.
 
 ## Mission
 {the mission locked at bootstrap's final review — the user's approved words}
@@ -248,10 +244,11 @@ follow "Each cycle" at the bottom.
   what is mid-flight, and what the next cycle must not redo. Never "next
   steps" — the next cycle decides.
 
-## Results   (loop-results/)
-- Every deliverable goes there. Keep output MINIMAL — update an existing
-  file instead of creating a new one, whenever possible.
-- Old results are archive: re-read one only when a task needs it.
+## Deliverables
+- Put each deliverable where it belongs in the project. Keep output MINIMAL —
+  update an existing file instead of creating a new one, whenever possible.
+- Note each deliverable's path on its task line in task.md, so a later cycle
+  can find it. Old deliverables are archive: re-read one only when a task needs it.
 
 ## User rules
 {the user's own constraints in plain words, or "- none yet"}
@@ -267,9 +264,9 @@ follow "Each cycle" at the bottom.
    outranks task.md, handoff.md, everything else in this list.
 3. Message box empty? Open task.md, then handoff.md. Work the topmost open
    [ ] task. Questions → inbox, mark [🟡], move to the next open task. Add
-   new tasks as they appear. Only read old loop-results/ or work/ files
+   new tasks as they appear. Only read old deliverables
    when a task actually needs them.
-4. Update task.md · tidy the inbox · update loop-results.
+4. Update task.md · tidy the inbox · update deliverables.
 5. Overwrite handoff.md using the next incrementing cycle number and the
    Handoff standard.
 6. Call sleep with a one-line status for the countdown screen. Duration per

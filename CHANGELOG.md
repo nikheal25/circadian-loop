@@ -5,9 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.4] - 2026-10-03
 
 ### Fixed
+- The red "Error: This operation was aborted" no longer appears after "Waking —
+  compacting into a fresh cycle...". The `sleep` tool used to start the
+  compaction inside its own run, which aborted the model request pi sends after
+  a tool result. It now returns `terminate: true` and the compaction starts from
+  the `agent_settled` event, once the run has stopped. The wake itself is
+  unchanged. Requires a pi version that emits `agent_settled`.
 - The generated `loop.md` template, the skill and the `sleep` tool guideline no
   longer tell the agent that cycles are logged automatically (the log is off
   unless `CIRCADIAN_DEBUG=1`). `sleep_overlay_action` added to the README
@@ -15,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CONTRIBUTING, AGENTS and the PR template no longer prescribe a manual
   temp-directory loop test or hard-code a test count; the file layout lists
   `debug-log.test.ts`, and the write-scope rule matches the code.
+
+### Removed
+- The `loop-results/` folder. Bootstrap no longer creates it. The agent puts
+  each deliverable where it belongs in the project and notes its path on the
+  task line in `task.md`. Existing loops: delete the `loop-results/` and
+  `.pi/loop/work/` lines from your `loop.md`.
+- The `.pi/loop/work/` scratch folder. Bootstrap no longer creates it and the
+  skill no longer mentions it. Nothing in the extension read it.
+
+### Added
+- `test/wake.test.ts`: the wake runs only after the run has settled.
 
 ## [0.1.3] - 2026-10-03
 
@@ -51,8 +68,7 @@ First public release.
   the last cycle's wall-clock, tool calls, tokens and cost. Problems with
   the loop are listed under "Needs your attention".
 - `circadian-loop` skill: bootstraps `loop.md`, `.pi/loop/task.md`,
-  `.pi/loop/inbox.md`, `.pi/loop/handoff.md`, `.pi/loop/work/` and
-  `loop-results/` from a short interview.
+  `.pi/loop/inbox.md`, `.pi/loop/handoff.md`, `.pi/loop/work/` from a short interview.
 - Cycle log at `.pi/loop/cycles.jsonl`, recording per-cycle metrics, wake
   outcomes, human interventions and sleep-screen actions.
 - Guarantee layer: an unplanned mid-cycle compaction triggers a

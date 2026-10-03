@@ -15,6 +15,7 @@ checkpoint to disk, sleep, wake with an empty context, continue.
 test/layout.test.ts                      sleep and help screen rendering
 test/status.test.ts                      loop-file parsing, against real files
 test/debug-log.test.ts                   CIRCADIAN_DEBUG gating of the cycle log
+test/wake.test.ts                        wake starts only after the run settles
 docs/                                    architecture + troubleshooting
 assets/*.svg                             sources for the README images
 ```

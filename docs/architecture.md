@@ -10,7 +10,7 @@ Files      loop.md + .pi/loop/             The loop's only memory.
 
 ## Why files, not conversation
 
-A conversation fills up and gets compacted, and the agent loses the thread. Circadian Loop treats the conversation as disposable and keeps every durable fact on disk. A fresh cycle rebuilds itself from five files: `loop.md`, `inbox.md`, `handoff.md`, `task.md` and the deliverables in `loop-results/`. `loop.md` is yours alone, `task.md` and `handoff.md` are the agent's alone, and `inbox.md` is shared.
+A conversation fills up and gets compacted, and the agent loses the thread. Circadian Loop treats the conversation as disposable and keeps every durable fact on disk. A fresh cycle rebuilds itself from four files: `loop.md`, `inbox.md`, `handoff.md` and `task.md`. `loop.md` is yours alone, `task.md` and `handoff.md` are the agent's alone, and `inbox.md` is shared.
 
 ## The cycle boundary
 

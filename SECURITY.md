@@ -21,8 +21,7 @@ issue asking for a private contact path, without technical details.
   `.pi/loop/task.md`, `.pi/loop/inbox.md`, `.pi/loop/handoff.md` and
   `.pi/loop/cycles.jsonl`, and the
   only file it ever writes is `.pi/loop/cycles.jsonl`. Every other file the
-  loop produces — the task list, the inbox, the handoff, everything in
-  `loop-results/` — is written by the agent's ordinary file tools, which you
+  loop produces — the task list, the inbox, the handoff, any deliverable — is written by the agent's ordinary file tools, which you
   approve like any other write.
 
 ## Supported versions

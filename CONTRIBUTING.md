@@ -4,7 +4,7 @@
 
 ```bash
 npm install
-npm test          # 24 tests, no API calls, ~1s
+npm test          # 32 tests, no API calls, well under a second
 npm run typecheck # strict tsc
 ```
 
@@ -45,10 +45,13 @@ There is no build step. pi compiles the TypeScript at load time.
 ## Testing a real loop
 
 ```bash
-cd ../try-circadian     # 60-second cycles
+mkdir /tmp/try-circadian && cd /tmp/try-circadian
 pi install /absolute/path/to/circadian-loop -l
 pi --approve
 ```
+
+Then run `/skill:circadian-loop`, give the loop any small mission, and answer
+the `#rhythm` question with **60 seconds** so cycles come round fast.
 
 Watch at least three cycles complete before shipping a change to the
 sleep/wake path.

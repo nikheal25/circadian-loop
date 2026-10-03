@@ -1,7 +1,7 @@
 {
   "name": "circadian-loop",
   "version": "0.1.0",
-  "description": "Circadian Loop for pi: the agent checkpoints to disk, sleeps on a countdown, then wakes into a fresh context and resumes from loop.md. Pure extension — no scripts, no patches.",
+  "description": "Make a pi agent work on one goal for days. It checkpoints to disk, sleeps on a countdown, then wakes with an empty context and resumes from loop.md. One extension, one skill, no build step.",
   "type": "module",
   "keywords": [
     "pi-package",
@@ -31,6 +31,7 @@
   "scripts": {
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run typecheck && npm test",
     "audit:runtime": "npm audit --omit=dev --omit=peer"
   },
   "files": [
@@ -51,8 +52,6 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-agent-core": "*",
-    "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
     "typebox": "*"

@@ -1,6 +1,6 @@
 ---
 name: circadian-loop
-description: Circadian Loop — a protocol that lets a pi agent work on a goal indefinitely through sleep/wake cycles, disk memory, and async human contact. Use when setting up a new loop or when loop.md is missing.
+description: Circadian Loop — a protocol that lets a pi agent work on a goal indefinitely through sleep/wake cycles, disk memory, and async human contact. Use when setting up a new loop, and equally when resuming one that already exists — loop.md missing at the project root means bootstrap, loop.md present means read it and carry on.
 ---
 
 # Circadian Loop

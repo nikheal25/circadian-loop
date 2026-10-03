@@ -4,3 +4,9 @@ node_modules/
 # so it must never be committed by accident.
 .pi/loop/
 loop-results/
+
+# Local publish runbook — never committed.
+PUBLISH-TO-NPM.md
+
+# Claude Code port: private work, not part of the pi package docs.
+claude-port/

@@ -23,7 +23,7 @@ There is no build step. pi compiles the TypeScript at load time.
 
 ```bash
 npm install
-npm test          # 24 tests, no API calls, ~1s
+npm test          # 32 tests, no API calls, well under a second
 npm run typecheck # strict tsc
 ```
 
@@ -55,9 +55,12 @@ literal pi machinery.
 - **Every rendered line must be exactly the requested width.** Overlays
   composite over existing terminal content; a short line leaves a visible
   gap. The layout tests enforce this.
-- **The loop must never die silently.** Any path where the wake message
-  fails to send must log to `cycles.jsonl` and surface through
-  `ctx.ui.notify`. This is the worst failure mode this package has.
+- **The loop must never die silently.** Every wake failure this extension
+  can observe must log to `cycles.jsonl` and surface through `ctx.ui.notify`.
+  Today that means synchronous throws from `pi.sendUserMessage`; pi swallows
+  asynchronous send failures internally, so those reach the user only through
+  pi's own error banner. Never widen that blind spot — this is the worst
+  failure mode this package has.
 - **Per-cycle vs cumulative metrics.** `sessionManager.getBranch()` walks
   from the branch root, so its totals are cumulative across the whole
   session. Per-cycle numbers are derived by subtraction in `cycleDelta` and
@@ -82,11 +85,14 @@ Unit tests do not exercise the sleep→compact→wake path. For that, run a real
 loop with short cycles and watch at least three complete:
 
 ```bash
-cd ../try-circadian
+mkdir /tmp/try-circadian && cd /tmp/try-circadian
+pi install /absolute/path/to/circadian-loop -l
 pi --approve
 ```
 
-Required before shipping any change to the wake mechanism.
+Then `/skill:circadian-loop`, any small mission, and **60 seconds** at the
+`#rhythm` question. Required before shipping any change to the wake
+mechanism.
 
 ## Git
 

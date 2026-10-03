@@ -13,11 +13,16 @@ issue asking for a private contact path, without technical details.
 
 - `.pi/loop/cycles.jsonl` records every message you type interactively,
   along with per-cycle metrics. It stays on your machine and is never
-  transmitted anywhere by this package. The shipped `.gitignore` excludes
-  `.pi/loop/`, so review yours before committing a project that uses this.
-- The extension makes no network calls and spawns no processes. It reads and
-  writes only under the project root: `loop.md`, `.pi/loop/`, and
-  `loop-results/`.
+  transmitted anywhere by this package. Installing the package does not add
+  anything to your project's `.gitignore`, so add `.pi/loop/` to it yourself
+  before committing a project that runs a loop.
+- The extension makes no network calls and spawns no processes. Its own
+  filesystem access is narrower than the loop's: it reads `loop.md`,
+  `.pi/loop/task.md`, `.pi/loop/inbox.md` and `.pi/loop/handoff.md`, and the
+  only file it ever writes is `.pi/loop/cycles.jsonl`. Every other file the
+  loop produces — the task list, the inbox, the handoff, everything in
+  `loop-results/` — is written by the agent's ordinary file tools, which you
+  approve like any other write.
 
 ## Supported versions
 

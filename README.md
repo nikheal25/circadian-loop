@@ -6,43 +6,50 @@
 
 **Make a [pi](https://pi.dev) agent work on one goal indefinitely. It works, saves everything to disk, sleeps, then wakes with an empty context and carries on. Forever.**
 
+[![npm](https://img.shields.io/npm/v/circadian-loop?style=for-the-badge&color=cb3837)](https://www.npmjs.com/package/circadian-loop)
 [![CI](https://img.shields.io/github/actions/workflow/status/nikheal25/circadian-loop/ci.yml?branch=main&style=for-the-badge&label=checks)](https://github.com/nikheal25/circadian-loop/actions/workflows/ci.yml)
 [![pi extension](https://img.shields.io/badge/pi-extension%20%2B%20skill-8b5cf6?style=for-the-badge)](https://github.com/earendil-works/pi-coding-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 ## Why this exists
 
-**Long tasks kill agent context.** Track a job market for three months, or grind through a migration module by module, and the agent dies of context exhaustion — not because it can't do the work, but because the conversation gets too long. You come back to a compacted, confused agent repeating itself.
+**An agent's memory is its conversation — and conversations run out.** Any job that takes days rather than minutes will fill the context window long before the work is done. The agent gets compacted, loses the thread, and starts redoing what it already finished. So you sit there babysitting it, or you never hand it the long job at all.
 
-**Circadian Loop fixes this with disk, not context.** Each cycle: do one task → write what happened to four small files → sleep. On wake, context is **empty** and it doesn't matter — everything needed is on disk. Cycle 400 starts as clean as cycle 1.
+**Circadian Loop moves the memory off the conversation and onto disk.** One cycle is: do a single task → write down what happened → sleep. When it wakes, the context is **empty**, and that no longer matters — the mission, the task list, your messages and the last cycle's note are all files it reads back on the way in. Cycle 400 starts as clean as cycle 1.
 
-**It never blocks on you.** Need an answer while you're asleep or at work? The question goes into an inbox file, that task waits, and the agent moves to the next one. Answer whenever — the next cycle picks it back up first.
+**So you can give it work that outlives a conversation.** *"Patch this repo's dependencies — one safe upgrade per cycle, smallest change that works"* and it is still going in week twelve. *"Every morning, check the production API's uptime, error rate and latency, and log an incident the moment one crosses the line"* and the log keeps filling while you sleep.
+
+**And it never blocks on you.** Need an answer while you're asleep or at work? The question goes into an inbox file, that one task waits, and the agent moves on to the next. Answer whenever — the next cycle picks that exact task back up first.
 
 ## Install
 
 Requires **pi v0.82+** and **Node 22+**. No cloning, no build step.
 
 ```bash
-pi install git:github.com/nikheal25/circadian-loop
+pi install npm:circadian-loop
 ```
 
 Restart pi after installing.
 
-> Not on npm yet — `pi install npm:circadian-loop` will 404 until this is published. Use the git install above until then.
-
 <details>
 <summary>Other install methods</summary>
+
+Straight from git instead of npm:
+
+```bash
+pi install git:github.com/nikheal25/circadian-loop
+```
 
 Into one project only (writes `.pi/settings.json` instead of your global settings):
 
 ```bash
-pi install git:github.com/nikheal25/circadian-loop -l
+pi install npm:circadian-loop -l
 ```
 
 Try it for a single run without installing anything:
 
 ```bash
-pi -e git:github.com/nikheal25/circadian-loop
+pi -e npm:circadian-loop
 ```
 
 </details>
@@ -54,13 +61,18 @@ mkdir my-loop && cd my-loop
 pi --approve
 ```
 
-Then type:
+Then run the skill:
 
 ```
-set up a circadian loop
+/skill:circadian-loop
 ```
 
-It asks four questions — what the goal is, any rules you want obeyed, how long to sleep between cycles — then writes `loop.md` and starts. That's the whole setup.
+That one command is the whole interface, and it does both jobs:
+
+- **No `loop.md` yet?** It interviews you — what the goal is, what rules you want obeyed, how long to sleep between cycles — then writes `loop.md` and the loop's files and starts. That's the entire setup.
+- **`loop.md` already there?** It reads it and picks the loop back up. This is also how you restart a loop after quitting pi.
+
+You can also just say it in plain words — "set up a circadian loop", or "follow loop.md" — and the agent will usually load the skill by itself. `/skill:circadian-loop` is the version that always works.
 
 ## How it works
 
@@ -77,7 +89,7 @@ It asks four questions — what the goal is, any rules you want obeyed, how long
 ```
 ╭──────────────────────────────────────────────────────────────────╮
 │                                                                  │
-│  ⠹  Circadian Loop                              waking at 03:44  │
+│  ⠹  Circadian Loop                              waking at 03:40  │
 │                                                                  │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
 │  5h 48m left                                                 3%  │
@@ -85,19 +97,19 @@ It asks four questions — what the goal is, any rules you want obeyed, how long
 │  Reviewed 3 new job listings, shortlisted one at Canva and       │
 │  parked a question about salary in the inbox.                    │
 │                                                                  │
-│ ▸ Wake now                                                       │
-│   +1h                                                            │
-│   −1h                                                            │
-│   +15m                                                           │
-│   −15m                                                           │
-│   Help                                                           │
-│   Stop the loop                                                  │
+│  ▸ Wake now                                                      │
+│    +1h                                                           │
+│    −1h                                                           │
+│    +15m                                                          │
+│    −15m                                                          │
+│    Help                                                          │
+│    Stop the loop                                                 │
 │                                                                  │
 │  ↑↓ select · enter apply                                         │
 ╰──────────────────────────────────────────────────────────────────╯
 ```
 
-**Help** answers "what is this thing actually doing?" — cycle number, the last cycle's note, the mission, how many tasks are open / waiting / done, what's next, whether your inbox needs you, and what the last cycle cost in time, tool calls, tokens and dollars. Problems (no `loop.md`, no tasks left, a failed compaction, an unanswered question) show under **Needs your attention**.
+**Help** answers "what is this thing actually doing?" — cycle number, the last cycle's note, the mission, how many tasks are open / waiting / done, what's next, whether your inbox needs you, and what the last cycle cost in time, tool calls, tokens and dollars. Problems (a missing loop file, no tasks left, a failed compaction, an unanswered question) show under **Needs your attention**.
 
 ## Talking to it
 
@@ -112,7 +124,7 @@ The next cycle reads that before anything else and does it first. Questions the 
 
 ## Configuration
 
-Everything lives in `loop.md` at your project root. The sections that change behaviour:
+Everything lives in `loop.md` at your project root. Every `##` section in it binds the agent; these are the ones you'll actually want to edit:
 
 | Section | What it controls |
 |---|---|
@@ -120,7 +132,7 @@ Everything lives in `loop.md` at your project root. The sections that change beh
 | `## Sleep` | Seconds between cycles, and a longer value for when every task is waiting on you. |
 | `## User rules` | Constraints the agent must obey every cycle — "ask before spending money", "never post publicly". |
 | `## When to stop` | A finish condition, or "never". |
-| `## Task standard` | How `task.md` is maintained. |
+| `## Task standard` | How `.pi/loop/task.md` is maintained. |
 
 Add your own `##` sections and they bind the agent exactly like the built-in ones.
 
@@ -135,16 +147,16 @@ The agent calls this itself at the end of a cycle. You never call it.
 
 ## Evaluation data
 
-Each cycle appends a record to `.pi/loop/cycles.jsonl`:
+The extension appends a line to `.pi/loop/cycles.jsonl` at every boundary. Each line carries an `event` field saying which kind it is:
 
-| Field | What it is |
+| `event` | What that line records |
 |---|---|
-| `cycle` | **this cycle alone** — tokens, cost, tool calls, wall-clock. Quote these. |
-| `cumulative` | session-to-date totals. Not a per-cycle number. |
-| `wake` | whether the boundary succeeded, tokens before → after, how much was cut |
-| `user_message` | every message you typed, with a timestamp |
+| `sleep` | The end of a cycle. Its `cycle` key is **that cycle alone** — tokens, cost, tool calls, wall-clock. Quote these. Its `cumulative` key is session-to-date totals, which are not per-cycle numbers. |
+| `wake` | The boundary itself: whether the compaction succeeded, tokens before → after, and how much was cut. |
+| `user_message` | Every message you typed, with a timestamp. |
+| `unplanned_compaction` · `wake_failed` · `stopped` · `aborted` | Everything that went sideways, so a loop that died leaves a reason behind. |
 
-The file stays on your machine and is never sent anywhere. The shipped `.gitignore` excludes it — see [SECURITY.md](SECURITY.md).
+The file stays on your machine and is never sent anywhere. Because it records everything you type, add `.pi/loop/` to your project's `.gitignore` before you commit — see [SECURITY.md](SECURITY.md).
 
 ## Limitations
 
@@ -157,7 +169,7 @@ The file stays on your machine and is never sent anywhere. The shipped `.gitigno
 
 ## Docs
 
-[Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Roadmap](TODO.md)
+[Contributing](https://github.com/nikheal25/circadian-loop/blob/main/CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Roadmap](https://github.com/nikheal25/circadian-loop/blob/main/TODO.md)
 
 ## License
 

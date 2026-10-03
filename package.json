@@ -1,7 +1,7 @@
 {
   "name": "circadian-loop",
-  "version": "0.1.4",
-  "description": "Make a pi agent work on one goal for days. It checkpoints to disk, sleeps on a countdown, then wakes with an empty context and resumes from loop.md. One extension, one skill, no build step.",
+  "version": "0.1.6",
+  "description": "Run a pi coding agent on one goal for days. It checkpoints to disk, sleeps on a countdown, then wakes with an empty context and resumes from loop.md. A long-running autonomous agent loop: one extension, one skill, no build step.",
   "type": "module",
   "keywords": [
     "pi-package",
@@ -13,9 +13,21 @@
     "loop",
     "circadian",
     "long-running",
-    "autonomous"
+    "autonomous",
+    "ai-agent",
+    "autonomous-agent",
+    "long-running-agent",
+    "agent-harness",
+    "llm",
+    "context-window",
+    "coding-agent",
+    "agentic",
+    "sleep-wake"
   ],
-  "author": "nikheal25",
+  "author": {
+    "name": "Nick Gholap",
+    "url": "https://www.linkedin.com/in/nick-gholap/"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

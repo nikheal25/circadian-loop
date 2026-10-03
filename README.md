@@ -169,7 +169,7 @@ The file stays on your machine and is never sent anywhere. It records everything
 
 ## Docs
 
-[Contributing](https://github.com/nikheal25/circadian-loop/blob/main/CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Roadmap](https://github.com/nikheal25/circadian-loop/blob/main/TODO.md)
+[Architecture](https://github.com/nikheal25/circadian-loop/blob/main/docs/architecture.md) · [Troubleshooting](https://github.com/nikheal25/circadian-loop/blob/main/docs/troubleshooting.md) · [Contributing](https://github.com/nikheal25/circadian-loop/blob/main/CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Roadmap](https://github.com/nikheal25/circadian-loop/blob/main/TODO.md)
 
 ## License
 

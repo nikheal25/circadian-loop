@@ -147,7 +147,7 @@ The agent calls this itself at the end of a cycle. You never call it.
 
 ## Evaluation data
 
-The extension appends a line to `.pi/loop/cycles.jsonl` at every boundary. Each line carries an `event` field saying which kind it is:
+When launched with `CIRCADIAN_DEBUG=1` (off by default), the extension appends a line to `.pi/loop/cycles.jsonl` at every boundary. Each line carries an `event` field saying which kind it is:
 
 | `event` | What that line records |
 |---|---|
@@ -156,7 +156,7 @@ The extension appends a line to `.pi/loop/cycles.jsonl` at every boundary. Each 
 | `user_message` | Every message you typed, with a timestamp. |
 | `unplanned_compaction` · `wake_failed` · `stopped` · `aborted` | Everything that went sideways, so a loop that died leaves a reason behind. |
 
-The file stays on your machine and is never sent anywhere. Because it records everything you type, add `.pi/loop/` to your project's `.gitignore` before you commit — see [SECURITY.md](SECURITY.md).
+The file stays on your machine and is never sent anywhere. It records everything you type, so add `.pi/loop/` to your project's `.gitignore` before you commit — see [SECURITY.md](SECURITY.md).
 
 ## Limitations
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-03
+
+### Changed
+- The cycle log (`.pi/loop/cycles.jsonl`) is now **off by default**. It is only
+  written when pi is launched with `CIRCADIAN_DEBUG=1`; otherwise nothing is
+  logged and `.pi/loop/` is not created by the log. Previously every typed
+  message and every cycle boundary was written on every run.
+- With the log off, the help screen has no cycle number or per-cycle stats and
+  does not show the "last wake failed" / "compaction failed" warnings. Sleep
+  and wake are unaffected.
+- README, SECURITY.md and `.gitignore` comments updated to match.
+
 ## [0.1.0] - 2026-08-08
 
 First public release.

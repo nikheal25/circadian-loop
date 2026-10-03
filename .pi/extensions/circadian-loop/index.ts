@@ -19,6 +19,9 @@ const HANDOFF_MD = `${LOOP_DIR}/handoff.md`;
 // plus the sleep summary and timestamps.
 const CYCLE_LOG = `${LOOP_DIR}/cycles.jsonl`;
 
+// Off by default. Set CIRCADIAN_DEBUG=1 to write the cycle log (debugging aid).
+const DEBUG = process.env.CIRCADIAN_DEBUG === "1";
+
 const TITLE = "Circadian Loop";
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const BOX_W = 68;
@@ -123,8 +126,8 @@ export default function (pi: ExtensionAPI) {
   };
 
   // ---------------------------------------------------------------
-  // Log every human-typed message. source "interactive" = the user typed it
-  // themselves (a genuine intervention mid-cycle); "extension" is our own wake
+  // Log every human-typed message (only when CIRCADIAN_DEBUG=1). source
+  // "interactive" = the user typed it themselves (a genuine intervention mid-cycle); "extension" is our own wake
   // message (loop.md) and "rpc" is API-driven, neither of which is a human
   // acting. This is the data for measuring human interventions and for
   // auditing exactly what the user said and when.
@@ -979,11 +982,13 @@ function read(root: string, rel: string): string | null {
   }
 }
 
-// Append one JSON line to the cycle log. Best-effort: a failed log write must
-// never block sleep or wake.
+// Append one JSON line to the cycle log. Only when CIRCADIAN_DEBUG=1; with the
+// flag off nothing is written. Best-effort: a failed log write must never
+// block sleep or wake.
 let logRoot: string = process.cwd();
 
-function appendCycleLog(record: Record<string, unknown>): void {
+export function appendCycleLog(record: Record<string, unknown>): void {
+  if (!DEBUG) return;
   try {
     const dir = path.resolve(logRoot, LOOP_DIR);
     fs.mkdirSync(dir, { recursive: true });

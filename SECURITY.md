@@ -11,8 +11,8 @@ issue asking for a private contact path, without technical details.
 
 ## What this package does with your data
 
-- `.pi/loop/cycles.jsonl` records every message you type interactively,
-  along with per-cycle metrics. It stays on your machine and is never
+- `.pi/loop/cycles.jsonl` is only written when you launch with `CIRCADIAN_DEBUG=1`. It records
+  per-cycle metrics and every message you type interactively. It stays on your machine and is never
   transmitted anywhere by this package. Installing the package does not add
   anything to your project's `.gitignore`, so add `.pi/loop/` to it yourself
   before committing a project that runs a loop.

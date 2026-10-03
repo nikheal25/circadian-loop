@@ -9,9 +9,9 @@ Open **Help** on the countdown screen first. Anything wrong shows under **Needs 
 | Help says the loop file is missing | `loop.md` isn't at the project root. | Run `/skill:circadian-loop` to set it up. |
 | Help says no tasks are left, or all are waiting | The task list is empty or blocked on you. | Add a message in `.pi/loop/inbox.md` under **Your message box**, or answer the open question. |
 | A question is still open | It's waiting for your answer. | Type it after `Your answer:` in `.pi/loop/inbox.md`. The next cycle resumes that task first. |
-| Help flags a failed compaction | The boundary compaction failed. The loop woke anyway, on a fuller context. | Read `.pi/loop/handoff.md` to see what the agent recorded. Relaunch with `CIRCADIAN_DEBUG=1` to log the reason. |
+| Help flags a failed compaction (only with `CIRCADIAN_DEBUG=1`) | The boundary compaction failed. The loop woke anyway, on a fuller context. | Read `.pi/loop/handoff.md` to see what the agent recorded, and the `wake` line in `.pi/loop/cycles.jsonl` for the reason. |
 | The loop stopped with no message | Something went wrong at a boundary. | Relaunch with `CIRCADIAN_DEBUG=1`. `.pi/loop/cycles.jsonl` records `wake_failed`, `unplanned_compaction`, `aborted` and `stopped` events. |
-| Costs are higher than expected | The loop runs while you're away. | Check the last cycle's cost on Help. Add a rule under `## User rules`, or lengthen `## Sleep`, in `loop.md`. |
+| Costs are higher than expected | The loop runs while you're away. | Launch with `CIRCADIAN_DEBUG=1` and check the last cycle's cost on Help. Add a rule under `## User rules`, or lengthen `## Sleep`, in `loop.md`. |
 | Large session file | A boundary is a compaction inside one session, so the file grows even though the context doesn't. | Expected for very long loops. |
 | `cycles.jsonl` stopped showing old cycles | Help reads only the last 256 KB. | Expected. The file itself keeps everything. |
 

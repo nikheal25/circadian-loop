@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The generated `loop.md` template, the skill and the `sleep` tool guideline no
+  longer tell the agent that cycles are logged automatically (the log is off
+  unless `CIRCADIAN_DEBUG=1`). `sleep_overlay_action` added to the README
+  event table.
+- CONTRIBUTING, AGENTS and the PR template no longer prescribe a manual
+  temp-directory loop test or hard-code a test count; the file layout lists
+  `debug-log.test.ts`, and the write-scope rule matches the code.
+
+## [0.1.3] - 2026-10-03
+
+### Added
+- `docs/architecture.md` and `docs/troubleshooting.md`.
+- README: a four-step cycle summary and a "Stopping and restarting" section.
+
+### Changed
+- README: the Help screen description now says the cycle number and per-cycle
+  cost need `CIRCADIAN_DEBUG=1`, matching the 0.1.1 behaviour.
+
 ## [0.1.1] - 2026-10-03
 
 ### Changed

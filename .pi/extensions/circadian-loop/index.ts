@@ -198,7 +198,7 @@ export default function (pi: ExtensionAPI) {
     // Bullets are appended flat with no tool-name prefix, so each one must
     // name the tool ("Call sleep when…", not "Use this tool when…").
     promptGuidelines: [
-      "Call sleep when you reach a stopping point. Before calling, checkpoint per loop.md: update .pi/loop/task.md, put every open question in .pi/loop/inbox.md, and OVERWRITE .pi/loop/handoff.md with one paragraph (what this cycle did, what is mid-flight, what not to redo). Never write cycle logs — sleep records the cycle automatically from your summary.",
+      "Call sleep when you reach a stopping point. Before calling, checkpoint per loop.md: update .pi/loop/task.md, put every open question in .pi/loop/inbox.md, and OVERWRITE .pi/loop/handoff.md with one paragraph (what this cycle did, what is mid-flight, what not to redo). Never write cycle logs.",
       "Sleep is how you wait for the user; the inbox is how their answer comes back. Never leave a question buried anywhere but the inbox.",
     ],
     parameters: Type.Object({

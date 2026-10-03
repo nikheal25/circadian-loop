@@ -19,7 +19,7 @@ labels: bug
 - OS:
 
 **Relevant lines from `.pi/loop/cycles.jsonl`**
-Redact anything private — this file records the messages you type.
+Only exists if you launched pi with `CIRCADIAN_DEBUG=1`. Redact anything private — it records the messages you type.
 
 ```
 

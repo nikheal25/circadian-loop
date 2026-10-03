@@ -29,8 +29,9 @@ If the compaction fails, the loop still wakes. A worse context is better than a 
 
 - **`sleep` tool.** The agent calls it. Parameters are `summary` and an optional `durationSeconds` (default 600).
 - **Countdown screen.** Progress bar, wake time, the last summary, and the menu: Wake now, ±1h, ±15m, Help, Stop.
-- **Help screen.** Reads the loop files and shows the cycle, mission, task counts, inbox state, per-cycle cost and anything needing attention.
+- **Help screen.** Reads the loop files and shows the mission, task counts, inbox state and anything needing attention. With `CIRCADIAN_DEBUG=1` it adds the cycle number and per-cycle cost.
 - **Wake.** Compact, then send `loop.md`. Guarded so one boundary can never start two cycles.
+- **Guarantee layer.** If pi compacts mid-cycle on its own (context full), the extension sends a message pointing the agent back at `loop.md` and the `.pi/loop/` files.
 - **Evaluation log.** `.pi/loop/cycles.jsonl`, written only when pi is launched with `CIRCADIAN_DEBUG=1`.
 
 ## What it does not do

@@ -61,7 +61,7 @@ follow `loop.md`, not this skill.
 | .pi/loop/handoff.md | last cycle's paragraph — overwritten each cycle | **agent only** |
 | .pi/loop/work/ | scratch | **agent only** |
 | loop-results/ (project root) | deliverables — minimal, update over create | **agent only** |
-| .pi/loop/cycles.jsonl | per-cycle eval data, auto-written at sleep | **system only** (never you) |
+| .pi/loop/cycles.jsonl | optional debug log, written only under `CIRCADIAN_DEBUG=1` | **system only** (never you) |
 
 Bootstrap creates this shape and writes the runtime rules into `loop.md` and
 the inbox template. After setup, the agent follows those generated files.

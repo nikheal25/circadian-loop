@@ -193,8 +193,8 @@ follow "Each cycle" at the bottom.
 - If you are ever told your context was compacted MID-cycle, that is not a
   new cycle: re-read this file and the .pi/loop/ files, then carry on where
   you were.
-- The system logs data about every cycle automatically for evaluation. You
-  never write history anywhere — your records are handoff.md and task.md.
+- You never write history or logs anywhere — your records are handoff.md
+  and task.md.
 - The user is rarely online when you are. Everything between you and them is
   asynchronous, through the files below.
 

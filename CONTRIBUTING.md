@@ -4,7 +4,7 @@
 
 ```bash
 npm install
-npm test          # 32 tests, no API calls, well under a second
+npm test          # no API calls, well under a second
 npm run typecheck # strict tsc
 ```
 
@@ -18,6 +18,8 @@ Node 22+ is required (the tests use `--experimental-strip-types`).
 .pi/skills/circadian-loop/bootstrap.md   the first-run interview + templates
 test/layout.test.ts                      sleep + help screen rendering
 test/status.test.ts                      loop-file parsing, against real files
+test/debug-log.test.ts                   CIRCADIAN_DEBUG gating of the cycle log
+docs/                                    architecture + troubleshooting
 ```
 
 There is no build step. pi compiles the TypeScript at load time.
@@ -29,8 +31,8 @@ There is no build step. pi compiles the TypeScript at load time.
   for a cycle describes a mechanism this protocol does not use. "Session" is
   correct only for pi's own machinery (`sessionManager`, `ctx.compact()`).
 - **Keep the extension self-contained.** No network calls, no spawned
-  processes, no writes outside `loop.md`, `.pi/loop/` and `loop-results/`.
-  Reviewers read this file first; it should stay easy to audit.
+  processes; the only file it writes is `.pi/loop/cycles.jsonl`, and only
+  under `CIRCADIAN_DEBUG=1`. Reviewers read this file first; it should stay easy to audit.
 - **Do not vendor pi's utilities.** `@earendil-works/pi-tui` exports
   `visibleWidth`, `truncateToWidth`, `wrapTextWithAnsi` and `sliceByColumn`.
   Import them. pi resolves these at load time.
@@ -41,20 +43,6 @@ There is no build step. pi compiles the TypeScript at load time.
 - **Every rendered line must be exactly the requested width.** Overlays
   composite over existing terminal content; a short line leaves a visible
   gap. The layout tests enforce this.
-
-## Testing a real loop
-
-```bash
-mkdir /tmp/try-circadian && cd /tmp/try-circadian
-pi install /absolute/path/to/circadian-loop -l
-pi --approve
-```
-
-Then run `/skill:circadian-loop`, give the loop any small mission, and answer
-the `#rhythm` question with **60 seconds** so cycles come round fast.
-
-Watch at least three cycles complete before shipping a change to the
-sleep/wake path.
 
 ## Pull requests
 

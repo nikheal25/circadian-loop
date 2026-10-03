@@ -84,6 +84,13 @@ You can also just say it in plain words — "set up a circadian loop", or "follo
 
 **Nothing is hidden.** Every file is markdown you can read and edit. There is no database and no state you can't see.
 
+**One cycle, in four steps:**
+
+1. **Wake.** The context is empty. The agent reads `loop.md`, your inbox, the last handoff note and the task list.
+2. **Work.** It does your messages first, then the topmost open task. One task per cycle.
+3. **Checkpoint.** It updates the task list, saves results to `loop-results/`, and overwrites `handoff.md` for its next self.
+4. **Sleep.** It calls `sleep`, the countdown starts, and when it ends the loop wakes again.
+
 ## The sleep screen
 
 ```
@@ -109,7 +116,11 @@ You can also just say it in plain words — "set up a circadian loop", or "follo
 ╰──────────────────────────────────────────────────────────────────╯
 ```
 
-**Help** answers "what is this thing actually doing?" — cycle number, the last cycle's note, the mission, how many tasks are open / waiting / done, what's next, whether your inbox needs you, and what the last cycle cost in time, tool calls, tokens and dollars. Problems (a missing loop file, no tasks left, a failed compaction, an unanswered question) show under **Needs your attention**.
+**Help** answers "what is this thing actually doing?" — the last cycle's note, the mission, how many tasks are open / waiting / done, what's next, and whether your inbox needs you. With `CIRCADIAN_DEBUG=1` it also shows the cycle number and what the last cycle cost in time, tool calls, tokens and dollars. Problems (a missing loop file, no tasks left, an unanswered question — and, with the debug log, a failed compaction or wake) show under **Needs your attention**.
+
+## Stopping and restarting
+
+Pick **Stop the loop** on the countdown screen, or just quit pi. To pick it up again later, open pi in the same folder and run `/skill:circadian-loop`. With `loop.md` already there, it resumes instead of running setup.
 
 ## Talking to it
 
@@ -154,6 +165,7 @@ When launched with `CIRCADIAN_DEBUG=1` (off by default), the extension appends a
 | `sleep` | The end of a cycle. Its `cycle` key is **that cycle alone** — tokens, cost, tool calls, wall-clock. Quote these. Its `cumulative` key is session-to-date totals, which are not per-cycle numbers. |
 | `wake` | The boundary itself: whether the compaction succeeded, tokens before → after, and how much was cut. |
 | `user_message` | Every message you typed, with a timestamp. |
+| `sleep_overlay_action` | Every option you picked on the sleep screen. |
 | `unplanned_compaction` · `wake_failed` · `stopped` · `aborted` | Everything that went sideways, so a loop that died leaves a reason behind. |
 
 The file stays on your machine and is never sent anywhere. It records everything you type, so add `.pi/loop/` to your project's `.gitignore` before you commit — see [SECURITY.md](SECURITY.md).
@@ -162,14 +174,14 @@ The file stays on your machine and is never sent anywhere. It records everything
 
 - **The agent must cooperate.** `sleep` is a tool it chooses to call. A model that ignores the instruction in `loop.md` will not loop. Stronger models hold the protocol better.
 - **A cycle is not a new session.** The boundary is a context compaction inside one pi session, so the session file grows even though the context does not. Very long-lived loops produce large session files.
-- **Costs run while you're away.** That is the point, but it is real money. Use `## User rules` to constrain what the agent may spend, and check the Help screen's per-cycle cost.
+- **Costs run while you're away.** That is the point, but it is real money. Use `## User rules` to constrain what the agent may spend, and, with `CIRCADIAN_DEBUG=1`, check the Help screen's per-cycle cost.
 - **One task per cycle by design.** If you want throughput, shorten the sleep interval rather than expecting parallel work.
 - **`cycles.jsonl` grows without bound**, and the Help screen only reads the last 256 KB of it.
 - **Terminal-first.** Headless modes (`--print`, `rpc`, `json`) sleep correctly, but the countdown screen and Help are TUI only.
 
 ## Docs
 
-[Architecture](https://github.com/nikheal25/circadian-loop/blob/main/docs/architecture.md) · [Troubleshooting](https://github.com/nikheal25/circadian-loop/blob/main/docs/troubleshooting.md) · [Contributing](https://github.com/nikheal25/circadian-loop/blob/main/CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [Roadmap](https://github.com/nikheal25/circadian-loop/blob/main/TODO.md)
+[Architecture](https://github.com/nikheal25/circadian-loop/blob/main/docs/architecture.md) · [Troubleshooting](https://github.com/nikheal25/circadian-loop/blob/main/docs/troubleshooting.md) · [Contributing](https://github.com/nikheal25/circadian-loop/blob/main/CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md)
 
 ## License
 

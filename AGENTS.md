@@ -14,6 +14,8 @@ checkpoint to disk, sleep, wake with an empty context, continue.
 .pi/skills/circadian-loop/bootstrap.md   first-run interview + file templates
 test/layout.test.ts                      sleep and help screen rendering
 test/status.test.ts                      loop-file parsing, against real files
+test/debug-log.test.ts                   CIRCADIAN_DEBUG gating of the cycle log
+docs/                                    architecture + troubleshooting
 assets/*.svg                             sources for the README images
 ```
 
@@ -23,7 +25,7 @@ There is no build step. pi compiles the TypeScript at load time.
 
 ```bash
 npm install
-npm test          # 32 tests, no API calls, well under a second
+npm test          # no API calls, well under a second
 npm run typecheck # strict tsc
 ```
 
@@ -46,8 +48,8 @@ literal pi machinery.
   Import them; pi resolves these at load time. An earlier version of this
   file reimplemented 150 lines of width math for no reason.
 - **Keep the extension auditable.** No network calls, no spawned processes,
-  no writes outside `loop.md`, `.pi/loop/` and `loop-results/`. Reviewers
-  read `index.ts` first because pi packages run with full system access.
+  the only file it writes is `.pi/loop/cycles.jsonl`, and only under
+  `CIRCADIAN_DEBUG=1`. Reviewers read `index.ts` first because pi packages run with full system access.
 - **Render functions stay pure.** `buildSleepCard`, `buildHelpCard`,
   `readLoopStatus` and `cycleDelta` are exported so they can be tested
   without a terminal. Never read from disk inside `render()` — it runs on
@@ -56,7 +58,8 @@ literal pi machinery.
   composite over existing terminal content; a short line leaves a visible
   gap. The layout tests enforce this.
 - **The loop must never die silently.** Every wake failure this extension
-  can observe must log to `cycles.jsonl` and surface through `ctx.ui.notify`.
+  can observe must surface through `ctx.ui.notify` (and log to
+  `cycles.jsonl` when `CIRCADIAN_DEBUG=1`).
   Today that means synchronous throws from `pi.sendUserMessage`; pi swallows
   asynchronous send failures internally, so those reach the user only through
   pi's own error banner. Never widen that blind spot — this is the worst
@@ -78,21 +81,6 @@ and type definitions:
 <pi-coding-agent>/docs/packages.md     package manifest, install sources
 <pi-coding-agent>/dist/**/*.d.ts       the real types
 ```
-
-## Testing a real loop
-
-Unit tests do not exercise the sleep→compact→wake path. For that, run a real
-loop with short cycles and watch at least three complete:
-
-```bash
-mkdir /tmp/try-circadian && cd /tmp/try-circadian
-pi install /absolute/path/to/circadian-loop -l
-pi --approve
-```
-
-Then `/skill:circadian-loop`, any small mission, and **60 seconds** at the
-`#rhythm` question. Required before shipping any change to the wake
-mechanism.
 
 ## Git
 

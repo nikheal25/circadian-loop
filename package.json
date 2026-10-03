@@ -1,6 +1,6 @@
 {
   "name": "circadian-loop",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Run a pi coding agent on one goal for days. It checkpoints to disk, sleeps on a countdown, then wakes with an empty context and resumes from loop.md. A long-running autonomous agent loop: one extension, one skill, no build step.",
   "type": "module",
   "keywords": [
